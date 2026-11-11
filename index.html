@@ -89,7 +89,7 @@ tr:target td,tr.flash td{background:var(--warn-bg)}
 </style>
 </head>
 <body>
-<div id="vHome" hidden><div class="wrap"><div class="panel hero"><h1>Selamat Datang di Peta Mutu</h1><p>Platform visualisasi dan analisis data mutu pendidikan berbasis web untuk mendukung pengambilan keputusan yang lebih baik.</p><div class="who"><button class="btn lg pg" data-login="pengawas">Pengawas</button><button class="btn lg sk" data-login="sekolah">Satuan Pendidikan</button></div><p id="lmsg" style="color:#d9364a;min-height:1.4em;margin:0"></p><p class="note">Masuk dengan email dan kata sandi. Pengawas didaftarkan oleh pemilik dashboard. Operator memilih sekolahnya, lalu menunggu persetujuan pengawas.</p><button class="btn" id="out" hidden>Keluar</button></div></div></div>
+<div id="vHome" hidden><div class="wrap"><div class="panel hero"><h1>Selamat Datang di Peta Mutu</h1><p>Platform visualisasi dan analisis data mutu pendidikan berbasis web untuk mendukung pengambilan keputusan yang lebih baik.</p><div class="who"><button class="btn lg pg" data-login="pengawas">Pengawas</button><button class="btn lg sk" data-login="sekolah">Satuan Pendidikan</button></div><p id="lmsg" style="color:#d9364a;min-height:1.4em;margin:0"></p><p class="note">Masuk dengan email dan kata sandi. Pengawas didaftarkan oleh pemilik dashboard. Operator memilih sekolahnya, lalu menunggu persetujuan pengawas.</p><button class="btn" id="out" hidden>Akun saya</button></div></div></div>
 <div id="vPick" hidden><div class="wrap"><div class="panel hero"><h1>Satuan Pendidikan</h1><p>Pilih sekolah Anda lalu masuk. Jika akun Anda belum terdaftar, pendaftaran dikirim ke pengawas untuk disetujui.</p><div class="who"><select id="ps" style="padding:10px;min-width:260px;max-width:100%;border-radius:8px"></select><button class="btn lg sk" id="pgo">Masuk</button></div><p id="pmsg" style="min-height:1.4em;margin:0 auto 12px;max-width:520px"></p><button class="btn" id="home3">Halaman awal</button></div></div></div>
 <div id="vDaftar" hidden><div class="wrap">
 <div class="top"><h1>Daftar sekolah binaan anda</h1><span><button class="btn" id="ops" hidden>Kelola akun</button> <button class="btn" id="guide">Panduan SPMI</button></span></div>
@@ -149,12 +149,23 @@ tr:target td,tr.flash td{background:var(--warn-bg)}
 <div class="foot"><span id="count"></span><button class="btn" id="back">Kembali ke daftar binaan</button> <button class="btn" id="home">Halaman awal</button></div>
 </div></div>
 <input type="file" id="fi" accept=".pdf,image/*" hidden>
-<dialog id="dauth"><h2>Masuk</h2><p class="note">Masuk dengan akun Anda, atau buat akun baru.</p>
+<dialog id="dauth"><h2 id="atl">Masuk</h2>
+<p style="margin:6px 0 10px"><button class="btn go" id="tin" type="button">Masuk</button> <button class="btn" id="tup" type="button">Daftar akun baru</button></p>
+<input id="anm" placeholder="Nama lengkap" autocomplete="name" style="width:100%;padding:8px;margin:4px 0" hidden>
 <input id="aem" type="email" placeholder="Email" autocomplete="username" style="width:100%;padding:8px;margin:4px 0">
-<input id="apw" type="password" placeholder="Kata sandi (minimal 6 karakter)" autocomplete="current-password" style="width:100%;padding:8px;margin:4px 0">
-<input id="anm" placeholder="Nama lengkap (hanya untuk akun baru)" style="width:100%;padding:8px;margin:4px 0">
+<div style="position:relative"><input id="apw" type="password" placeholder="Kata sandi (minimal 6 karakter)" autocomplete="current-password" style="width:100%;padding:8px;margin:4px 0"><button class="btn" id="spw" type="button" style="position:absolute;right:4px;top:8px;padding:4px 8px">Lihat</button></div>
+<input id="apw2" type="password" placeholder="Ulangi kata sandi" autocomplete="new-password" style="width:100%;padding:8px;margin:4px 0" hidden>
 <p id="amsg" style="color:#d9364a;min-height:1.4em;margin:4px 0"></p>
-<button class="btn go" id="alog">Masuk</button> <button class="btn" id="areg">Buat akun baru</button> <button class="btn" onclick="this.closest('dialog').close()">Batal</button></dialog>
+<button class="btn go" id="asub" type="button">Masuk</button> <button class="btn" type="button" onclick="this.closest('dialog').close()">Batal</button>
+<p style="margin-top:10px"><button class="btn" id="afor" type="button" style="border:0;background:none;text-decoration:underline;padding:0">Lupa kata sandi?</button></p></dialog>
+<dialog id="dacc"><h2>Akun saya</h2><p id="ainfo" class="note"></p>
+<p><button class="btn" id="rver" type="button" hidden>Kirim ulang email verifikasi</button></p>
+<h3>Ubah kata sandi</h3>
+<input id="cpw" type="password" placeholder="Kata sandi saat ini" autocomplete="current-password" style="width:100%;padding:8px;margin:4px 0">
+<input id="npw" type="password" placeholder="Kata sandi baru (minimal 6 karakter)" autocomplete="new-password" style="width:100%;padding:8px;margin:4px 0">
+<p id="cmsg" style="min-height:1.4em;margin:4px 0"></p>
+<button class="btn go" id="cpb" type="button">Ubah kata sandi</button>
+<p style="margin-top:14px"><button class="btn" id="logout" type="button">Keluar</button> <button class="btn" type="button" onclick="this.closest('dialog').close()">Tutup</button></p></dialog>
 <dialog id="dlk"><h2>Tautan dokumen</h2><p class="note">Unggah dokumen ke Google Drive sekolah, atur berbagi ke "Siapa saja yang memiliki link", lalu tempel tautannya.</p>
 <input id="lku" placeholder="https://drive.google.com/..." style="width:100%;padding:8px;margin:4px 0"><input id="lkn" placeholder="Nama dokumen (opsional)" style="width:100%;padding:8px;margin:4px 0">
 <p style="margin-top:10px"><button class="btn go" id="lks">Simpan</button> <button class="btn" onclick="this.closest('dialog').close()">Batal</button></p></dialog>
@@ -325,9 +336,15 @@ document.addEventListener("click",function(e){
   else if(b.id==="pgo")pgo();
   else if(d.up){upNo=+d.up;$("lku").value="";$("lkn").value="";$("dlk").showModal()}
   else if(b.id==="lks")saveLink()
-  else if(b.id==="alog")authGo(false)
-  else if(b.id==="areg")authGo(true)
-  else if(b.id==="out")AUTH.signOut().then(function(){location.hash="masuk";location.reload()})
+  else if(b.id==="tin")setMode("in")
+  else if(b.id==="tup")setMode("up")
+  else if(b.id==="asub")authSubmit()
+  else if(b.id==="afor")resetPw()
+  else if(b.id==="spw"){var iw=$("apw"),sh=iw.type==="password";iw.type=sh?"text":"password";$("apw2").type=iw.type;b.textContent=sh?"Sembunyikan":"Lihat"}
+  else if(b.id==="out")openAcc()
+  else if(b.id==="cpb")changePw()
+  else if(b.id==="rver"){AUTH.currentUser.sendEmailVerification().then(function(){toast("Email verifikasi dikirim")},function(){toast("Gagal mengirim, coba lagi nanti")})}
+  else if(b.id==="logout")AUTH.signOut().then(function(){location.hash="masuk";location.reload()})
   else if(b.id==="eacts")openEd()
   else if(b.id==="eadd"){EDIT.push({id:"n"+Date.now().toString(36),tahap:EDIT.length?EDIT[EDIT.length-1].tahap:"",akt:"",ket:""});edRender()}
   else if(b.id==="esave")saveEd()
@@ -354,17 +371,43 @@ document.addEventListener("click",function(e){
 ["q","fTahap","fStatus"].forEach(function(i){$(i).addEventListener("input",render)});
 window.addEventListener("hashchange",route);
 
-var AERR={"auth/invalid-credential":"Email atau kata sandi salah.","auth/wrong-password":"Email atau kata sandi salah.","auth/user-not-found":"Email atau kata sandi salah.","auth/email-already-in-use":"Email sudah terdaftar. Silakan masuk.","auth/weak-password":"Kata sandi minimal 6 karakter.","auth/invalid-email":"Format email tidak valid.","auth/too-many-requests":"Terlalu banyak percobaan, coba lagi nanti."};
+var AERR={"auth/network-request-failed":"Koneksi internet bermasalah.","auth/user-disabled":"Akun ini dinonaktifkan.","auth/requires-recent-login":"Silakan keluar lalu masuk lagi, kemudian ulangi.","auth/missing-password":"Isi kata sandi.","auth/invalid-credential":"Email atau kata sandi salah.","auth/wrong-password":"Email atau kata sandi salah.","auth/user-not-found":"Email atau kata sandi salah.","auth/email-already-in-use":"Email sudah terdaftar. Silakan masuk.","auth/weak-password":"Kata sandi minimal 6 karakter.","auth/invalid-email":"Format email tidak valid.","auth/too-many-requests":"Terlalu banyak percobaan, coba lagi nanti."};
 function goLogin(w){
-  if(!LIVE){if(CFG){pendingW=w;$("amsg").textContent="";$("dauth").showModal();return}location.hash=w==="sekolah"?"pilih":"daftar";return}
+  if(!LIVE){if(CFG){pendingW=w;setMode("in");$("dauth").showModal();return}location.hash=w==="sekolah"?"pilih":"daftar";return}
   if(w==="pengawas"&&ME.role!=="pengawas"){$("lmsg").textContent="Akun ini belum terdaftar sebagai pengawas. Hubungi pemilik dashboard.";return}
   $("lmsg").textContent="";location.hash=w==="sekolah"?"pilih":"daftar"}
-async function authGo(reg){var em=$("aem").value.trim(),pw=$("apw").value,nm=$("anm").value.trim(),m=$("amsg");m.textContent="";
-  if(!em||pw.length<6){m.textContent="Isi email dan kata sandi (minimal 6 karakter).";return}
-  if(reg&&!nm){m.textContent="Isi nama lengkap untuk akun baru.";return}
-  try{if(reg){var c=await AUTH.createUserWithEmailAndPassword(em,pw);await c.user.updateProfile({displayName:nm});await DB.doc("profil/"+c.user.uid).set({name:nm,email:em},{merge:true})}
+var AMODE="in";
+function setMode(m){AMODE=m;$("atl").textContent=m==="in"?"Masuk":"Buat akun baru";$("anm").hidden=$("apw2").hidden=m==="in";
+  $("asub").textContent=m==="in"?"Masuk":"Buat akun";$("afor").hidden=m!=="in";$("amsg").textContent="";
+  $("tin").className="btn"+(m==="in"?" go":"");$("tup").className="btn"+(m==="up"?" go":"");
+  $("apw").autocomplete=m==="in"?"current-password":"new-password"}
+function amsg(t,ok){var m=$("amsg");m.textContent=t;m.style.color=ok?"#1a7f4b":"#d9364a"}
+async function authSubmit(){var em=$("aem").value.trim(),pw=$("apw").value,nm=$("anm").value.trim(),bt=$("asub");amsg("");
+  if(!/^\S+@\S+\.\S+$/.test(em)){amsg("Isi email dengan format yang benar.");return}
+  if(pw.length<6){amsg("Kata sandi minimal 6 karakter.");return}
+  if(AMODE==="up"){if(!nm){amsg("Isi nama lengkap.");return}if(pw!==$("apw2").value){amsg("Ulangi kata sandi tidak sama.");return}}
+  bt.disabled=true;
+  try{if(AMODE==="up"){var c=await AUTH.createUserWithEmailAndPassword(em,pw);
+      await c.user.updateProfile({displayName:nm});await DB.doc("profil/"+c.user.uid).set({name:nm,email:em},{merge:true});
+      c.user.sendEmailVerification().catch(function(){});toast("Akun dibuat. Email verifikasi dikirim ke "+em)}
     else await AUTH.signInWithEmailAndPassword(em,pw);
-    $("dauth").close()}catch(e){m.textContent=AERR[e.code]||("Gagal: "+(e.message||e))}}
+    $("apw").value=$("apw2").value="";$("dauth").close()}
+  catch(e){amsg(AERR[e.code]||("Gagal: "+(e.message||e)))}
+  bt.disabled=false}
+async function resetPw(){var em=$("aem").value.trim();
+  if(!/^\S+@\S+\.\S+$/.test(em)){amsg("Isi email Anda di kolom Email dulu, lalu klik Lupa kata sandi.");return}
+  try{await AUTH.sendPasswordResetEmail(em);amsg("Jika email terdaftar, tautan atur ulang kata sandi sudah dikirim. Cek kotak masuk dan folder spam.",true)}
+  catch(e){amsg(AERR[e.code]||("Gagal: "+(e.message||e)))}}
+function openAcc(){var u=AUTH.currentUser;if(!u)return;
+  $("ainfo").innerHTML=esc(u.displayName||"-")+"<br>"+esc(u.email)+"<br>Peran: "+(ME.role==="pengawas"?"Pengawas":"Operator / satuan pendidikan")+"<br>Email "+(u.emailVerified?"sudah diverifikasi":"belum diverifikasi");
+  $("rver").hidden=u.emailVerified;$("cpw").value=$("npw").value="";$("cmsg").textContent="";$("dacc").showModal()}
+async function changePw(){var u=AUTH.currentUser,cm=$("cmsg"),cur=$("cpw").value,nw=$("npw").value;
+  var say2=function(t,ok){cm.textContent=t;cm.style.color=ok?"#1a7f4b":"#d9364a"};
+  if(!cur||nw.length<6){say2("Isi kata sandi saat ini dan kata sandi baru (minimal 6 karakter).");return}
+  try{await u.reauthenticateWithCredential(firebase.auth.EmailAuthProvider.credential(u.email,cur));await u.updatePassword(nw);
+    $("cpw").value=$("npw").value="";say2("Kata sandi berhasil diubah.",true)}
+  catch(e){say2(AERR[e.code]||("Gagal: "+(e.message||e)))}}
+$("dauth").addEventListener("keydown",function(e){if(e.key==="Enter"&&e.target.tagName==="INPUT"){e.preventDefault();authSubmit()}});
 async function saveLink(){var u=$("lku").value.trim(),n=$("lkn").value.trim(),row=D[upNo-1];
   if(!/^https:\/\/\S+$/.test(u)){toast("Tempel tautan lengkap yang diawali https://");return}
   if(!row||!opCan())return;
@@ -395,13 +438,13 @@ async function startLive(u){
     snap("dec",function(x){return x},function(o){DEC=o});
     snap("acts",function(x){return x.list||[]},function(o){ACTS=o});
     if(ME.admin)DB.collection("profil").onSnapshot(function(q){var o={};q.docs.forEach(function(x){o[x.id]=x.data()});PROF=o;if($("dop").open)opList()},er);
-    $("out").hidden=false;$("out").textContent="Keluar ("+u.email+")";
+    $("out").hidden=false;$("out").textContent="Akun saya ("+u.email+")";
     sync();
     if(pendingW){var w=pendingW;pendingW=null;goLogin(w)}
   }catch(e){LIVE=false;toast("Gagal memuat data: "+((e&&e.message)||"periksa aturan Firestore"))}}
 
 CFG=FB_CONFIG.apiKey.indexOf("ISI")!==0&&typeof firebase!=="undefined";
-if(CFG){firebase.initializeApp(FB_CONFIG);AUTH=firebase.auth();DB=firebase.firestore();
+if(CFG){firebase.initializeApp(FB_CONFIG);AUTH=firebase.auth();AUTH.languageCode="id";DB=firebase.firestore();
   AUTH.onAuthStateChanged(function(u){if(u)startLive(u)});route()}
 else{demo();route()}
 </script>
