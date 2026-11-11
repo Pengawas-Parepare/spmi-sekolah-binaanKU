@@ -86,6 +86,23 @@ tr:target td,tr.flash td{background:var(--warn-bg)}
 #toast.show{opacity:1}
 @media(prefers-reduced-motion:reduce){#toast{transition:none}}
 .edr{display:grid;grid-template-columns:24px 1fr 2fr 1fr auto;gap:6px;margin:6px 0;align-items:center}.edr input{padding:6px;min-width:0}#ded{width:min(980px,96vw)}@media(max-width:700px){.edr{grid-template-columns:1fr}}
+
+:root{--none:#c4ccd8}
+@media (prefers-color-scheme:dark){:root:not([data-theme="light"]){--none:#3b4d6b}}
+:root[data-theme="dark"]{--none:#3b4d6b}
+.cg{display:grid;grid-template-columns:repeat(auto-fit,minmax(300px,1fr));gap:14px;margin:14px 0}
+.cg .panel{min-width:0}.cg .wide{grid-column:1/-1}
+.cg h2{margin:0 0 4px}.cg .sub{color:var(--muted);font-size:.82rem;margin:0 0 10px}
+.dn{display:flex;align-items:center;gap:16px;flex-wrap:wrap}
+.dn div div{margin:3px 0}.sw{display:inline-block;width:10px;height:10px;border-radius:2px;margin-right:6px}
+.lg{display:flex;flex-wrap:wrap;gap:4px 14px;font-size:.82rem;color:var(--muted);margin-top:10px}
+.hb{display:grid;grid-template-columns:minmax(90px,36%) 1fr auto;gap:8px;align-items:center;margin:7px 0;font-size:.85rem}
+.hb .nm{overflow:hidden;text-overflow:ellipsis;white-space:nowrap;background:none;border:0;padding:0;text-align:left;color:var(--ink);font:inherit}
+.hb button.nm{cursor:pointer;text-decoration:underline;text-decoration-color:var(--line)}
+.hb .tr{display:flex;height:12px;border-radius:6px;overflow:hidden;background:var(--none)}
+.hb .tr i{display:block;height:100%}.hb .vl{color:var(--muted);white-space:nowrap}
+.sc{max-height:340px;overflow:auto;padding-right:4px}
+@media(max-width:700px){.cg .wide{grid-column:auto}}
 </style>
 </head>
 <body>
@@ -94,6 +111,7 @@ tr:target td,tr.flash td{background:var(--warn-bg)}
 <div id="vDaftar" hidden><div class="wrap">
 <div class="top"><h1>Daftar sekolah binaan anda</h1><span><button class="btn" id="ops" hidden>Kelola akun</button> <button class="btn" id="guide">Panduan SPMI</button></span></div>
 <p class="note">Status validasi di daftar ini sama dengan yang ada di laporan masing-masing sekolah.</p>
+<div class="cg" id="cg"></div>
 <div class="tablebox"><table><thead><tr><th>No</th><th>NPSN</th><th>Nama sekolah</th><th>Kabupaten</th><th>Kecamatan</th><th>Jenjang</th><th>Progres validasi</th><th>Aksi</th></tr></thead><tbody id="tl"></tbody></table></div>
 <div class="foot"><button class="btn" id="toDash">Kembali ke dashboard</button> <button class="btn" id="home2">Halaman awal</button></div>
 </div></div>
@@ -126,7 +144,7 @@ tr:target td,tr.flash td{background:var(--warn-bg)}
   </div>
   <div class="panel">
     <h2>Ringkasan</h2>
-    <div class="stats" id="stats"></div>
+    <div class="stats" id="stats"></div><div id="dnS" style="margin-top:14px"></div>
     <h2 style="margin-top:20px">Unggahan per tanggal</h2>
     <div class="days" id="days"></div>
   </div>
@@ -260,6 +278,7 @@ function summary(){
   $("pct").textContent=Math.round(v/(n||1)*100)+"%";
   $("pctTxt").textContent=v+" dari "+n+" aktivitas sudah divalidasi";
   $("stats").innerHTML=[["Total",n],["Valid",v],["Belum valid",b+w]].map(function(s){return '<div class="stat"><b>'+s[1]+'</b><small>'+s[0]+'</small></div>'}).join("");
+  $("dnS").innerHTML=donut(cnt(D),110);
   var h="";
   var T=[];D.forEach(function(r){if(T.indexOf(r.tahap)<0)T.push(r.tahap)});
   T.forEach(function(t){
@@ -289,7 +308,38 @@ function render(){
   $("count").textContent="Menampilkan "+rows.length+" dari "+D.length+" aktivitas";
 }
 
-function listView(){var L=mine();
+var CL=[["valid","Valid","var(--ok)"],["belum","Belum valid","var(--warn)"],["tunggu","Menunggu verifikasi","var(--wait)"],["kosong","Belum diunggah","var(--none)"]];
+function cls(r){return r.st==="valid"?"valid":r.st==="belum"?"belum":r.file?"tunggu":"kosong"}
+function cnt(rows){var c={valid:0,belum:0,tunggu:0,kosong:0};rows.forEach(function(r){c[cls(r)]++});return c}
+function legend(){return '<div class="lg">'+CL.map(function(k){return '<span><i class="sw" style="background:'+k[2]+'"></i>'+k[1]+'</span>'}).join("")+'</div>'}
+function stack(c){var n=c.valid+c.belum+c.tunggu+c.kosong||1;return '<div class="tr">'+CL.map(function(k){return c[k[0]]?'<i style="width:'+(c[k[0]]/n*100)+'%;background:'+k[2]+'" title="'+k[1]+': '+c[k[0]]+'"></i>':""}).join("")+'</div>'}
+function donut(c,sz){var n=c.valid+c.belum+c.tunggu+c.kosong,R=46,C=2*Math.PI*R,off=0,seg="";
+  CL.forEach(function(k){var v=c[k[0]];if(!v)return;var len=v/n*C;seg+='<circle cx="60" cy="60" r="'+R+'" fill="none" stroke-width="16" style="stroke:'+k[2]+'" stroke-dasharray="'+len+' '+(C-len)+'" stroke-dashoffset="'+(-off)+'" transform="rotate(-90 60 60)"><title>'+k[1]+': '+v+'</title></circle>';off+=len});
+  if(!n)seg='<circle cx="60" cy="60" r="46" fill="none" stroke-width="16" style="stroke:var(--none)"/>';
+  return '<div class="dn"><svg viewBox="0 0 120 120" width="'+sz+'" height="'+sz+'" role="img" aria-label="Diagram status aktivitas"><g>'+seg+'</g><text x="60" y="60" text-anchor="middle" font-size="20" font-weight="700" style="fill:var(--ink)">'+Math.round(c.valid/(n||1)*100)+'%</text><text x="60" y="75" text-anchor="middle" font-size="9" style="fill:var(--muted)">valid</text></svg><div>'+CL.map(function(k){return '<div><i class="sw" style="background:'+k[2]+'"></i>'+k[1]+': <b>'+c[k[0]]+'</b></div>'}).join("")+'</div></div>'}
+function wkTrend(L){
+  var by={};function mon(d){var x=new Date(d.getFullYear(),d.getMonth(),d.getDate());x.setDate(x.getDate()-((x.getDay()+6)%7));return x}
+  function key(d){return d.getFullYear()+"-"+d.getMonth()+"-"+d.getDate()}
+  L.forEach(function(s){s.rows.forEach(function(r){if(!r.file||!r.tgl)return;var m=/^(\d\d)-(\d\d)-(\d{4})/.exec(r.tgl);if(!m)return;var k=key(mon(new Date(+m[3],+m[2]-1,+m[1])));by[k]=(by[k]||0)+1})});
+  var W=[],base=mon(new Date()),tot=0;for(var i=7;i>=0;i--){var d=new Date(base);d.setDate(d.getDate()-7*i);var v=by[key(d)]||0;tot+=v;W.push([d,v])}
+  if(!tot)return '<p class="note">Belum ada dokumen yang diunggah dalam 8 minggu terakhir.</p>';
+  var mx=Math.max.apply(null,W.map(function(w){return w[1]}))||1,X=function(i){return 24+i*(272/7)},Y=function(v){return 118-v/mx*92},pts=W.map(function(w,i){return X(i)+","+Y(w[1])}).join(" ");
+  var pad=function(n){return String(n).padStart(2,"0")};
+  return '<svg viewBox="0 0 320 150" width="100%" role="img" aria-label="Unggahan dokumen per minggu"><line x1="24" y1="118" x2="296" y2="118" style="stroke:var(--line)"/><text x="2" y="30" font-size="9" style="fill:var(--muted)">'+mx+'</text><text x="2" y="121" font-size="9" style="fill:var(--muted)">0</text><polyline points="'+pts+'" fill="none" stroke-width="2.5" style="stroke:var(--brand)"/>'+
+    W.map(function(w,i){return '<circle cx="'+X(i)+'" cy="'+Y(w[1])+'" r="3.5" style="fill:var(--brand)"><title>Minggu '+pad(w[0].getDate())+'/'+pad(w[0].getMonth()+1)+': '+w[1]+' dokumen</title></circle><text x="'+X(i)+'" y="136" text-anchor="middle" font-size="8.5" style="fill:var(--muted)">'+pad(w[0].getDate())+'/'+pad(w[0].getMonth()+1)+'</text>'}).join("")+'</svg>'}
+function charts(L){var el=$("cg");if(!L.length){el.innerHTML="";return}
+  var all=[];L.forEach(function(s){all=all.concat(s.rows)});
+  var bySch=L.map(function(s){var c=cnt(s.rows);return {s:s,c:c,r:c.valid/(s.rows.length||1)}}).sort(function(a,b){return a.r-b.r||a.s.nama.localeCompare(b.s.nama)});
+  var A={},ord=[];all.forEach(function(r){var a=A[r.id];if(!a){a=A[r.id]={akt:r.akt,rows:[]};ord.push(r.id)}a.rows.push(r)});
+  var acts=ord.map(function(id){var c=cnt(A[id].rows);return {a:A[id].akt,c:c,x:c.belum+c.tunggu+c.kosong}}).filter(function(o){return o.x>0}).sort(function(p,q){return q.x-p.x}).slice(0,8);
+  el.innerHTML=
+   '<div class="panel"><h2>Status seluruh sekolah binaan</h2><p class="sub">'+L.length+' sekolah, '+all.length+' aktivitas</p>'+donut(cnt(all),130)+'</div>'+
+   '<div class="panel"><h2>Unggahan per minggu</h2><p class="sub">8 minggu terakhir, berdasarkan tanggal unggah terakhir tiap dokumen</p>'+wkTrend(L)+'</div>'+
+   '<div class="panel wide"><h2>Progres per sekolah</h2><p class="sub">Diurutkan dari yang paling tertinggal. Klik nama sekolah untuk membuka laporannya.</p><div class="sc">'+
+    bySch.map(function(o){return '<div class="hb"><button class="nm" data-open="'+esc(o.s.npsn)+'" title="'+esc(o.s.nama)+'">'+esc(o.s.nama)+'</button>'+stack(o.c)+'<span class="vl">'+o.c.valid+'/'+o.s.rows.length+' valid</span></div>'}).join("")+'</div>'+legend()+'</div>'+
+   '<div class="panel wide"><h2>Aktivitas yang paling sering belum lengkap</h2><p class="sub">Delapan aktivitas dengan sekolah terbanyak yang belum valid</p>'+
+    (acts.length?acts.map(function(o){return '<div class="hb"><span class="nm" title="'+esc(o.a)+'">'+esc(o.a)+'</span>'+stack(o.c)+'<span class="vl">'+o.x+' dari '+L.length+' sekolah</span></div>'}).join("")+legend():'<p class="note">Semua aktivitas sudah valid di semua sekolah.</p>')+'</div>'}
+function listView(){var L=mine();charts(L);
   $("tl").innerHTML=L.length?L.map(function(s,i){var v=s.rows.filter(function(r){return r.st==="valid"}).length;
     return '<tr><td class="num">'+(i+1)+'</td><td>'+esc(s.npsn)+'</td><td>'+esc(s.nama)+'</td><td>Kota Parepare</td><td>Kec. Bacukiki Barat</td><td>SD</td><td><div class="mini"><div><i style="width:'+Math.round(v/(s.rows.length||1)*100)+'%"></i></div>'+v+'/'+s.rows.length+'</div></td><td><button class="btn go" data-open="'+esc(s.npsn)+'">Lihat laporan SPMI</button></td></tr>'}).join(""):'<tr><td colspan="8" class="empty">Belum ada sekolah binaan. Tambahkan lewat Kelola sekolah dan operator.</td></tr>';
 }
@@ -371,7 +421,7 @@ document.addEventListener("click",function(e){
   else if(b.id==="bcus"){var n=$("bn").value.trim(),nm=$("bnm").value.trim();if(!/^\d{5,10}$/.test(n)||!nm){toast("Isi NPSN (angka) dan nama sekolah");return}addSchool(n,nm.toUpperCase());$("bn").value="";$("bnm").value=""}
   else if(b.id==="ops"){$("dop").showModal();opList()}
   else if(d.open)location.hash="sekolah-"+d.open;
-  else if(b.id==="toDash")location.hash=cur?"sekolah-"+cur.npsn:"daftar";
+  else if(b.id==="toDash"){var tl=mine(),tg=(cur&&tl.some(function(x){return x.npsn===cur.npsn}))?cur:tl[0];if(tg)location.hash="sekolah-"+tg.npsn;else toast("Belum ada sekolah binaan. Tambahkan lewat tombol Kelola akun.")}
   else if(b.id==="guide")$("dlg").showModal();
   else if(d.set)set(+d.no,d.set);
   else if(d.doc)toast("Dokumen arsip awal belum punya file untuk dibuka");
