@@ -231,6 +231,8 @@ function sync(){
   SCH=Object.keys(OWN).sort().map(function(n){return {npsn:n,nama:OWN[n].nama,pw:OWN[n].uid,rows:rows(actList(OWN[n].uid))}});
   ME.npsn=null;Object.keys(APPR).forEach(function(n){if(OWN[n]&&APPR[n].uid===UID)ME.npsn=n});
   if(!ME.admin)ME.role=ME.npsn?"sekolah":"none";
+  if(LIVE&&!ME.admin&&ME.npsn&&!window.VSUB&&OWN[ME.npsn]){window.VSUB=1;var vpw=OWN[ME.npsn].uid;
+    DB.doc("verif/"+vpw).onSnapshot(function(x){VER=x.exists?{[vpw]:(x.data().st||{})}:{};sync()},function(){})}
   var ks=Object.keys(VER).sort(function(a,b){return (b.indexOf("seed-")===0)-(a.indexOf("seed-")===0)});
   SCH.forEach(function(s){
     var a=APPR[s.npsn],it=a?(SUBS[a.uid]||{}):{};
@@ -311,17 +313,18 @@ function route(e){
   if(e&&e.type)window.scrollTo(0,0);
 }
 function say(t){$("pmsg").textContent=t}
-function pgo(){
+async function pgo(){
   var n=$("ps").value;if(!n)return;
   if(!LIVE){location.hash="sekolah-"+n;return}
   var a=APPR[n],g=REG[UID],d=DEC[UID];
+  if(!a){try{var ax=await DB.doc("appr/"+n).get();if(ax.exists)a=ax.data()}catch(e){}}
   if(a&&a.uid===UID){location.hash="sekolah-"+n;return}
   if(a){say("Pendaftaran ditolak: sekolah ini sudah memiliki operator yang mendaftar sebelumnya dan telah disetujui pengawas. Hubungi pengawas jika akun perlu diganti.");return}
   if(ME.npsn){say("Akun Anda sudah terhubung ke sekolah lain.");return}
   if(g&&g.npsn===n){say(d&&d.npsn===n&&d.ts>g.ts?"Pendaftaran Anda ditolak pengawas.":"Pendaftaran Anda masih menunggu persetujuan pengawas.");return}
-  DB.doc("reg/"+UID).set({npsn:n,ts:Date.now()}).then(function(){say("Pendaftaran terkirim. Tunggu persetujuan pengawas, lalu masuk lagi.")},function(){say("Gagal mendaftar, coba lagi.")})}
+  DB.doc("reg/"+UID).set({npsn:n,ts:Date.now(),pw:OWN[n].uid,name:(AUTH.currentUser.displayName||AUTH.currentUser.email),email:AUTH.currentUser.email}).then(function(){say("Pendaftaran terkirim. Tunggu persetujuan pengawas, lalu masuk lagi.")},function(){say("Gagal mendaftar, coba lagi.")})}
 function approve(u,n){if(APPR[n]){toast("Sekolah ini sudah memiliki operator yang disetujui");return}
-  DB.doc("appr/"+n).set({uid:u,ts:Date.now()}).then(function(){toast("Operator disetujui")},fail)}
+  DB.doc("appr/"+n).set({uid:u,ts:Date.now(),pw:UID}).then(function(){toast("Operator disetujui")},fail)}
 function addSchool(n,nama){if(!n){toast("Pilih sekolah dulu");return}
   if(OWN[n]){toast(OWN[n].uid===UID?"Sekolah sudah ada di daftar binaan Anda":"Sekolah ini sudah menjadi binaan pengawas lain");return}
   var sc=Object.assign({},(BIN[UID]||{}).schools||{});sc[n]={nama:nama,ts:Date.now()};
@@ -331,7 +334,7 @@ function delSchool(n){var sc=Object.assign({},(BIN[UID]||{}).schools||{});delete
 async function opList(){
   var L=mine(),P=pend(),ids=[];P.forEach(function(p){ids.push(p.uid)});L.forEach(function(s){if(APPR[s.npsn])ids.push(APPR[s.npsn].uid)});
   ids=ids.filter(function(i){return i.indexOf("seed-")!==0});var ps={};
-  ps=PROF;
+  Object.keys(REG).forEach(function(u){ps[u]=REG[u]});
   var nm=function(u){return u.indexOf("seed-")===0?"Operator arsip awal":esc((ps[u]&&(ps[u].name||ps[u].email))||"Pengguna")};
   $("bl").innerHTML=L.length?L.map(function(s){return '<div class="rowx">'+esc(s.nama)+' <button class="btn" data-bdel="'+esc(s.npsn)+'">Lepas</button></div>'}).join(""):"Belum ada sekolah binaan.";
   $("bm").innerHTML=MASTER.filter(function(s){return !OWN[s[0]]}).map(function(s){return '<option value="'+s[0]+'">'+esc(s[1])+'</option>'}).join("");
@@ -361,7 +364,7 @@ document.addEventListener("click",function(e){
   else if(d.mv){mvEd(+d.i,+d.mv)}
   else if(d.rm){if(confirm("Hapus aktivitas ini? Dokumen dan status validasinya tidak akan tampil lagi.")){EDIT.splice(+d.i,1);edRender()}}
   else if(d.ok)approve(d.ok,d.sc);
-  else if(d.rej)DB.doc("dec/"+d.rej).set({npsn:d.sc,ts:Date.now()}).then(function(){toast("Permintaan ditolak")},fail);
+  else if(d.rej)DB.doc("dec/"+d.rej).set({npsn:d.sc,ts:Date.now(),pw:UID}).then(function(){toast("Permintaan ditolak")},fail);
   else if(d.adel)DB.doc("appr/"+d.adel).delete().then(function(){toast("Akun operator dihapus. Sekolah bisa didaftar ulang.")},fail);
   else if(d.bdel)delSchool(d.bdel);
   else if(b.id==="badd")addSchool($("bm").value,(MASTER.filter(function(s){return s[0]===$("bm").value})[0]||[])[1]);
@@ -398,7 +401,7 @@ async function authSubmit(){var em=$("aem").value.trim(),pw=$("apw").value,nm=$(
   if(AMODE==="up"){if(!nm){amsg("Isi nama lengkap.");return}if(pw!==$("apw2").value){amsg("Ulangi kata sandi tidak sama.");return}}
   bt.disabled=true;
   try{if(AMODE==="up"){var c=await AUTH.createUserWithEmailAndPassword(em,pw);
-      await c.user.updateProfile({displayName:nm});await DB.doc("profil/"+c.user.uid).set({name:nm,email:em},{merge:true});
+      await c.user.updateProfile({displayName:nm});
       c.user.sendEmailVerification().catch(function(){});toast("Akun dibuat. Email verifikasi dikirim ke "+em)}
     else await AUTH.signInWithEmailAndPassword(em,pw);
     $("apw").value=$("apw2").value="";$("dauth").close()}
@@ -447,7 +450,7 @@ async function saveLink(){if(UPBUSY)return;
     url=u;name=n||"Dokumen"
   }else{lkm("Pilih file atau tempel tautan dulu.");return}
   var items=Object.assign({},SUBS[UID]||{});items[row.id]={n:name,url:url,at:stamp()};
-  try{await DB.doc("subs/"+UID).set({items:items});$("dlk").close();toast("Dokumen tersimpan")}catch(e){fail()}
+  try{await DB.doc("subs/"+UID).set({items:items,pw:cur.pw});$("dlk").close();toast("Dokumen tersimpan")}catch(e){fail()}
   UPBUSY=false;$("lks").disabled=false}
 function openEd(){EDIT=D.map(function(r){return {id:r.id,tahap:r.tahap,akt:r.akt,ket:r.ket||""}});edRender();$("ded").showModal()}
 function edRender(){$("edl").innerHTML=EDIT.map(function(a,i){var f=function(k,p){return '<input data-f="'+k+'" data-i="'+i+'" value="'+esc(a[k])+'" placeholder="'+p+'">'};
@@ -463,17 +466,26 @@ async function startLive(u){
   try{UID=u.uid;
     var ad=await DB.doc("admins/"+UID).get();ME.admin=ad.exists;ME.role=ME.admin?"pengawas":"none";
     LIVE=true;SCH=[];cur=null;D=[];
-    var pf={email:u.email};if(u.displayName)pf.name=u.displayName;DB.doc("profil/"+UID).set(pf,{merge:true}).catch(function(){});
     var er=function(){toast("Koneksi data bermasalah, muat ulang halaman")};
-    var snap=function(n,get,put){DB.collection(n).onSnapshot(function(q){var o={};q.docs.forEach(function(x){o[x.id]=get(x.data()||{})});put(o);LD[n]=1;MR=Object.keys(LD).length>=7;sync()},er)};
-    snap("binaan",function(x){return x},function(o){BIN=o});
-    snap("subs",function(x){return x.items||{}},function(o){SUBS=o});
-    snap("verif",function(x){return x.st||{}},function(o){VER=o});
-    snap("reg",function(x){return x},function(o){REG=o});
-    snap("appr",function(x){return x},function(o){APPR=o});
-    snap("dec",function(x){return x},function(o){DEC=o});
-    snap("acts",function(x){return x.list||[]},function(o){ACTS=o});
-    if(ME.admin)DB.collection("profil").onSnapshot(function(q){var o={};q.docs.forEach(function(x){o[x.id]=x.data()});PROF=o;if($("dop").open)opList()},er);
+    var LDK=ME.admin?["binaan","acts","verif","reg","appr","subs","dec"]:["binaan","acts","reg","dec","appr","subs"];
+    var ready=function(n){LD[n]=1;MR=LDK.every(function(k){return LD[k]});sync()};
+    var idf=function(x){return x};
+    var qs=function(n,q,get,put){q.onSnapshot(function(c){var o={};c.docs.forEach(function(x){o[x.id]=get(x.data()||{})});put(o);ready(n)},er)};
+    var ds=function(n,r,get,put){r.onSnapshot(function(x){put(x.exists?get(x.data()||{}):null);ready(n)},er)};
+    qs("binaan",DB.collection("binaan"),idf,function(o){BIN=o});
+    qs("acts",DB.collection("acts"),function(x){return x.list||[]},function(o){ACTS=o});
+    if(ME.admin){
+      ds("verif",DB.doc("verif/"+UID),function(x){return x.st||{}},function(v){VER=v?{[UID]:v}:{}});
+      qs("reg",DB.collection("reg").where("pw","==",UID),idf,function(o){REG=o});
+      qs("appr",DB.collection("appr").where("pw","==",UID),idf,function(o){APPR=o});
+      qs("subs",DB.collection("subs").where("pw","==",UID),function(x){return x.items||{}},function(o){SUBS=o});
+      qs("dec",DB.collection("dec").where("pw","==",UID),idf,function(o){DEC=o});
+    }else{
+      ds("reg",DB.doc("reg/"+UID),idf,function(v){REG=v?{[UID]:v}:{}});
+      ds("dec",DB.doc("dec/"+UID),idf,function(v){DEC=v?{[UID]:v}:{}});
+      ds("subs",DB.doc("subs/"+UID),function(x){return x.items||{}},function(v){SUBS=v?{[UID]:v}:{}});
+      qs("appr",DB.collection("appr").where("uid","==",UID),idf,function(o){APPR=o});
+    }
     $("out").hidden=false;$("out").textContent="Akun saya ("+u.email+")";
     sync();
     if(pendingW){WANT=pendingW;pendingW=null}
