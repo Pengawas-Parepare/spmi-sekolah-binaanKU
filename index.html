@@ -372,8 +372,9 @@ async function pgo(){
   if(a&&a.uid===UID){location.hash="sekolah-"+n;return}
   if(a){say("Pendaftaran ditolak: sekolah ini sudah memiliki operator yang mendaftar sebelumnya dan telah disetujui pengawas. Hubungi pengawas jika akun perlu diganti.");return}
   if(ME.npsn){say("Akun Anda sudah terhubung ke sekolah lain.");return}
-  if(g&&g.npsn===n){say(d&&d.npsn===n&&d.ts>g.ts?"Pendaftaran Anda ditolak pengawas.":"Pendaftaran Anda masih menunggu persetujuan pengawas.");return}
-  DB.doc("reg/"+UID).set({npsn:n,ts:Date.now(),pw:OWN[n].uid,name:(AUTH.currentUser.displayName||AUTH.currentUser.email),email:AUTH.currentUser.email}).then(function(){say("Pendaftaran terkirim. Tunggu persetujuan pengawas, lalu masuk lagi.")},function(){say("Gagal mendaftar, coba lagi.")})}
+  var rj=false;
+  if(g&&g.npsn===n){rj=!!(d&&d.npsn===n&&d.ts>g.ts);if(!rj){say("Pendaftaran Anda masih menunggu persetujuan pengawas.");return}}
+  DB.doc("reg/"+UID).set({npsn:n,ts:Date.now(),pw:OWN[n].uid,name:(AUTH.currentUser.displayName||AUTH.currentUser.email),email:AUTH.currentUser.email}).then(function(){say(rj?"Pendaftaran sebelumnya ditolak. Pengajuan baru sudah dikirim ke pengawas, tunggu persetujuannya lalu masuk lagi.":"Pendaftaran terkirim. Tunggu persetujuan pengawas, lalu masuk lagi.")},function(){say("Gagal mendaftar, coba lagi.")})}
 function approve(u,n){if(APPR[n]){toast("Sekolah ini sudah memiliki operator yang disetujui");return}
   DB.doc("appr/"+n).set({uid:u,ts:Date.now(),pw:UID}).then(function(){toast("Operator disetujui")},fail)}
 function addSchool(n,nama){if(!n){toast("Pilih sekolah dulu");return}
