@@ -208,7 +208,7 @@ function toast(m){var t=$("toast");t.textContent=m;t.classList.add("show");clear
 function fail(){toast("Gagal menyimpan, coba lagi")}
 var LIVE=false,ME={role:"demo",npsn:null,admin:false},BIN={},SUBS={},VER={},REG={},APPR={},DEC={},LD={},OWN={},MR=false,UID=null,USER=null,DB=null,AS=null,upNo=0,SCH=[],cur=null,D=[];
 var DEF=BASE.map(function(r,j){return {id:"a"+(j+1),tahap:r[0],akt:r[1],ket:""}});
-var ACTS={},PROF={},EDIT=null,AUTH=null,CFG=false,pendingW=null;
+var AUTOGO=false,WANT=null,ACTS={},PROF={},EDIT=null,AUTH=null,CFG=false,pendingW=null;
 function actList(p){var l=ACTS[p];return l&&l.length?l:DEF}
 function rows(l){return (l||DEF).map(function(r,j){return {no:j+1,id:r.id,tahap:r.tahap,akt:r.akt,ket:r.ket||"",tgl:"-",st:"menunggu",file:null}})}
 function demo(){SCH=MASTER.map(function(s,i){var rs=rows();if(i===0)rs.forEach(function(r,j){r.tgl=BASE[j][2];r.file={n:"Dokumen arsip",at:r.tgl};r.st="valid"});return {npsn:s[0],nama:s[1],pw:null,rows:rs}});cur=SCH[0];D=cur.rows}
@@ -232,6 +232,10 @@ function sync(){
     ks.forEach(function(u){if(u!==s.pw&&u.indexOf("seed-")!==0)return;var v=(VER[u]||{})[s.npsn]||{};
       s.rows.forEach(function(r){var x=v[r.id];if(r.file&&x&&x.at===r.file.at)r.st=x.s})});
   });
+  if(LIVE&&MR&&!AUTOGO){AUTOGO=true;var hh=location.hash.slice(1);
+    if(WANT==="pengawas"&&ME.role!=="pengawas"){$("lmsg").textContent="Akun ini belum terdaftar sebagai pengawas. Hubungi pemilik dashboard."}
+    else if(!hh||hh==="masuk"||(hh==="pilih"&&ME.npsn&&WANT!=="sekolah")){
+      location.hash=(ME.role==="pengawas"&&WANT!=="sekolah")?"daftar":ME.npsn?"sekolah-"+ME.npsn:"pilih"}}
   route();if($("dop").open)opList();
 }
 function set(no,st){
@@ -440,7 +444,7 @@ async function startLive(u){
     if(ME.admin)DB.collection("profil").onSnapshot(function(q){var o={};q.docs.forEach(function(x){o[x.id]=x.data()});PROF=o;if($("dop").open)opList()},er);
     $("out").hidden=false;$("out").textContent="Akun saya ("+u.email+")";
     sync();
-    if(pendingW){var w=pendingW;pendingW=null;goLogin(w)}
+    if(pendingW){WANT=pendingW;pendingW=null}
   }catch(e){LIVE=false;toast("Gagal memuat data: "+((e&&e.message)||"periksa aturan Firestore"))}}
 
 CFG=FB_CONFIG.apiKey.indexOf("ISI")!==0&&typeof firebase!=="undefined";
