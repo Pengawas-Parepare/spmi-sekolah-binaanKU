@@ -117,12 +117,20 @@ tr:target td,tr.flash td{background:var(--warn-bg)}
 </div></div>
 <dialog id="dlg"><h2>Panduan SPMI</h2><ol><li>Pengawas menambahkan sekolah binaannya lewat Kelola sekolah dan operator.</li><li>Operator memilih sekolahnya di halaman Satuan Pendidikan lalu mendaftar. Pengawas menyetujui atau menolak.</li><li>Satu sekolah hanya bisa memiliki satu operator. Pengawas bisa menghapus akun operator agar sekolah bisa didaftar ulang.</li><li>Operator mengunggah dokumen (Excel, Word, PDF, foto/gambar, maksimal 10 MB), pengawas memverifikasi. Jika dokumen diganti, status kembali menunggu.</li></ol><button class="btn" onclick="this.parentNode.close()">Tutup</button></dialog>
 <dialog id="dop"><h2>Kelola sekolah dan operator</h2>
-<h3>Sekolah binaan</h3><div id="bl"></div>
-<select id="bm" style="width:100%;padding:8px;margin:8px 0"></select><button class="btn go" id="badd">Tambah dari daftar</button>
-<div style="display:flex;gap:6px;margin:8px 0"><input id="bn" placeholder="NPSN" style="width:110px;padding:8px"><input id="bnm" placeholder="Nama sekolah" style="flex:1;padding:8px"><button class="btn" id="bcus">Tambah</button></div>
+<div id="tpbox" hidden><label class="note">Kelola binaan untuk:</label> <select id="tpw" style="padding:6px;margin:4px 0"></select></div>
+<h3>Sekolah binaan <small id="bcnt" class="note"></small></h3>
+<input id="bq" placeholder="Cari nama atau NPSN" style="width:100%;padding:8px;margin:4px 0">
+<div id="bchk" style="max-height:260px;overflow:auto;border:1px solid var(--line);border-radius:8px;padding:6px"></div>
+<p style="margin:8px 0"><button class="btn go" id="bsave">Simpan pilihan</button></p>
+<details style="margin:6px 0"><summary>Sekolah tidak ada di daftar? Tambah manual</summary>
+<div style="display:flex;gap:6px;margin:8px 0"><input id="bn" placeholder="NPSN" style="width:110px;padding:8px"><input id="bnm" placeholder="Nama sekolah" style="flex:1;padding:8px"><button class="btn" id="bcus">Tambah</button></div></details>
 <h3>Permintaan operator</h3><div id="rq"></div>
 <h3>Operator yang disetujui</h3><div id="ap"></div>
-<div id="ownbox" hidden><h3>Permintaan pengawas</h3><div id="pq"></div><h3>Daftar pengawas</h3><div id="pl"></div></div>
+<div id="ownbox" hidden><h3>Permintaan pengawas</h3><div id="pq"></div><h3>Daftar pengawas</h3><div id="pl"></div>
+<h3>Daftar sekolah (master)</h3><p class="note" id="mcnt"></p>
+<textarea id="mta" rows="5" placeholder="Satu sekolah per baris: NPSN;NAMA SEKOLAH" style="width:100%;padding:8px"></textarea>
+<button class="btn go" id="madd">Tambah / perbarui</button>
+<div style="display:flex;gap:6px;margin:8px 0"><input id="mdn" placeholder="NPSN yang dihapus" style="width:160px;padding:8px"><button class="btn" id="mdel">Hapus dari daftar</button></div></div>
 <p style="margin-top:14px"><button class="btn" onclick="this.closest('dialog').close()">Tutup</button></p></dialog>
 <div id="vLap"><div class="wrap">
 <header>
@@ -237,14 +245,16 @@ var MAX_SEKOLAH=15,ADM={},PREQ={},AUTOGO=false,WANT=null,ACTS={},PROF={},EDIT=nu
 function actList(p){var l=ACTS[p];return l&&l.length?l:DEF}
 function rows(l){return (l||DEF).map(function(r,j){return {no:j+1,id:r.id,tahap:r.tahap,akt:r.akt,ket:r.ket||"",tgl:"-",st:"menunggu",file:null}})}
 function demo(){SCH=MASTER.map(function(s,i){var rs=rows();if(i===0)rs.forEach(function(r,j){r.tgl=BASE[j][2];r.file={n:"Dokumen arsip",at:r.tgl};r.st="valid"});return {npsn:s[0],nama:s[1],pw:null,rows:rs}});cur=SCH[0];D=cur.rows}
-function owners(){var o={};Object.keys(BIN).forEach(function(u){var sc=(BIN[u]||{}).schools||{};Object.keys(sc).forEach(function(n){var t=sc[n].ts||0;if(!o[n]||t<o[n].ts)o[n]={uid:u,ts:t,nama:sc[n].nama}})});return o}
-function mine(){return SCH.filter(function(s){return !LIVE||s.pw===UID})}
-function pemb(){return !LIVE||(ME.role==="pengawas"&&!!cur&&cur.pw===UID)}
+function owners(){var o={};Object.keys(BIN).forEach(function(u){var sc=(BIN[u]||{}).schools||{};Object.keys(sc).forEach(function(n){var t=sc[n].ts||0;if(!o[n]||t<o[n].ts)o[n]={uid:u,ts:t,nama:sc[n].nama}})});
+  if(OWNERUID)Object.keys(MAS).forEach(function(n){if(!o[n])o[n]={uid:OWNERUID,ts:0,nama:MAS[n],dflt:true}});return o}
+function mine(){return SCH.filter(function(s){return !LIVE||ME.owner||s.pw===UID})}
+function pwName(u){var a=ADM[u]||{};return a.name||a.email||"Pengawas lain"}
+function pemb(){return !LIVE||(ME.role==="pengawas"&&!!cur&&(ME.owner||cur.pw===UID))}
 function opCan(){return LIVE&&ME.role==="sekolah"&&!!cur&&ME.npsn===cur.npsn}
 function stamp(){var d=new Date(),p=function(n){return String(n).padStart(2,"0")};return p(d.getDate())+"-"+p(d.getMonth()+1)+"-"+d.getFullYear()+" "+p(d.getHours())+":"+p(d.getMinutes())}
 function docCell(r){if(!r.file)return "-";if(r.file.url)return '<a class="btn" href="'+esc(r.file.url)+'" target="_blank" rel="noopener noreferrer">Buka dokumen</a><br><small>'+esc(r.file.n)+'</small>';return '<button class="btn" data-doc="'+r.no+'">Lihat/Unduh</button>'}
 function actCell(r){var h="";if(opCan())h+='<button class="btn go" data-up="'+r.no+'">'+(r.file?"Ganti dokumen":"Unggah dokumen")+'</button>';if(pemb())h+='<div class="acts"><button class="btn'+(r.st==="valid"?" on":"")+'" data-set="valid" data-no="'+r.no+'">Valid</button><button class="btn'+(r.st==="belum"?" on":"")+'" data-set="belum" data-no="'+r.no+'">Belum valid</button><button class="btn" data-set="menunggu" data-no="'+r.no+'">Batal validasi</button></div>';return h}
-function pend(){var mm={};mine().forEach(function(s){mm[s.npsn]=1});return Object.keys(REG).filter(function(u){var g=REG[u],d=DEC[u];return mm[g.npsn]&&!APPR[g.npsn]&&!(d&&d.npsn===g.npsn&&d.ts>g.ts)}).map(function(u){return {uid:u,npsn:REG[u].npsn}})}
+function pend(){var mm={};(ME.owner?SCH:mine()).forEach(function(s){mm[s.npsn]=1});return Object.keys(REG).filter(function(u){var g=REG[u],d=DEC[u];return mm[g.npsn]&&!APPR[g.npsn]&&!(d&&d.npsn===g.npsn&&d.ts>g.ts)}).map(function(u){return {uid:u,npsn:REG[u].npsn}})}
 function sync(){
   OWN=owners();
   SCH=Object.keys(OWN).sort().map(function(n){return {npsn:n,nama:OWN[n].nama,pw:OWN[n].uid,rows:rows(actList(OWN[n].uid))}});
@@ -270,9 +280,9 @@ function set(no,st){
   if(LIVE){
     if(!pemb()){toast("Hanya pengawas Pembina sekolah ini yang dapat memverifikasi");return}
     if(!r.file){toast("Belum ada dokumen yang diunggah");return}
-    var all=Object.assign({},VER[UID]||{}),o=Object.assign({},all[cur.npsn]||{});
+    var all=Object.assign({},VER[cur.pw]||{}),o=Object.assign({},all[cur.npsn]||{});
     o[r.id]={s:st,at:r.file.at};all[cur.npsn]=o;
-    DB.doc("verif/"+UID).set({st:all}).then(function(){toast(msg)},fail);return}
+    DB.doc("verif/"+cur.pw).set({st:all}).then(function(){toast(msg)},fail);return}
   r.st=st;toast(msg);render()}
 function summary(){
   var n=D.length,v=D.filter(function(r){return r.st==="valid"}).length,b=D.filter(function(r){return r.st==="belum"}).length,w=n-v-b;
@@ -341,8 +351,9 @@ function charts(L){var el=$("cg");if(!L.length){el.innerHTML="";return}
    '<div class="panel wide"><h2>Aktivitas yang paling sering belum lengkap</h2><p class="sub">Delapan aktivitas dengan sekolah terbanyak yang belum valid</p>'+
     (acts.length?acts.map(function(o){return '<div class="hb"><span class="nm" title="'+esc(o.a)+'">'+esc(o.a)+'</span>'+stack(o.c)+'<span class="vl">'+o.x+' dari '+L.length+' sekolah</span></div>'}).join("")+legend():'<p class="note">Semua aktivitas sudah valid di semua sekolah.</p>')+'</div>'}
 function listView(){var L=mine();charts(L);
+  if(LIVE&&MR&&ME.role==="pengawas"&&!L.length&&!window.AUTOOP){window.AUTOOP=1;openOps()}
   $("tl").innerHTML=L.length?L.map(function(s,i){var v=s.rows.filter(function(r){return r.st==="valid"}).length;
-    return '<tr><td class="num">'+(i+1)+'</td><td>'+esc(s.npsn)+'</td><td>'+esc(s.nama)+'</td><td>Kota Parepare</td><td>Kec. Bacukiki Barat</td><td>SD</td><td><div class="mini"><div><i style="width:'+Math.round(v/(s.rows.length||1)*100)+'%"></i></div>'+v+'/'+s.rows.length+'</div></td><td><button class="btn go" data-open="'+esc(s.npsn)+'">Lihat laporan SPMI</button></td></tr>'}).join(""):'<tr><td colspan="8" class="empty">Belum ada sekolah binaan. Tambahkan lewat Kelola sekolah dan operator.</td></tr>';
+    return '<tr><td class="num">'+(i+1)+'</td><td>'+esc(s.npsn)+'</td><td>'+esc(s.nama)+(ME.owner&&s.pw!==UID?' <small class="note">('+esc(pwName(s.pw))+')</small>':'')+'</td><td>Kota Parepare</td><td>Kec. Bacukiki Barat</td><td>SD</td><td><div class="mini"><div><i style="width:'+Math.round(v/(s.rows.length||1)*100)+'%"></i></div>'+v+'/'+s.rows.length+'</div></td><td><button class="btn go" data-open="'+esc(s.npsn)+'">Lihat laporan SPMI</button></td></tr>'}).join(""):'<tr><td colspan="8" class="empty">Belum ada sekolah binaan. Tambahkan lewat Kelola sekolah dan operator.</td></tr>';
 }
 function route(e){
   var h=location.hash.slice(1)||"masuk",R=ME.role,m=/^sekolah-(\d+)$/.exec(h);
@@ -351,7 +362,7 @@ function route(e){
     if(!MR)ok=false;
     else if(h==="masuk"||h==="pilih")ok=true;
     else if(h==="daftar")ok=R==="pengawas";
-    else if(m){var s=find(m[1]);ok=!!s&&((R==="pengawas"&&s.pw===UID)||(R==="sekolah"&&ME.npsn===m[1]))}
+    else if(m){var s=find(m[1]);ok=!!s&&((R==="pengawas"&&(ME.owner||s.pw===UID))||(R==="sekolah"&&ME.npsn===m[1]))}
     if(!ok){h="masuk";m=null}
   }else if(m&&!find(m[1])){h="masuk";m=null}
   if(m){cur=find(m[1]);D=cur.rows}
@@ -372,36 +383,70 @@ async function pgo(){
   if(a&&a.uid===UID){location.hash="sekolah-"+n;return}
   if(a){say("Pendaftaran ditolak: sekolah ini sudah memiliki operator yang mendaftar sebelumnya dan telah disetujui pengawas. Hubungi pengawas jika akun perlu diganti.");return}
   if(ME.npsn){say("Akun Anda sudah terhubung ke sekolah lain.");return}
-  var rj=false;
-  if(g&&g.npsn===n){rj=!!(d&&d.npsn===n&&d.ts>g.ts);if(!rj){say("Pendaftaran Anda masih menunggu persetujuan pengawas.");return}}
-  DB.doc("reg/"+UID).set({npsn:n,ts:Date.now(),pw:OWN[n].uid,name:(AUTH.currentUser.displayName||AUTH.currentUser.email),email:AUTH.currentUser.email}).then(function(){say(rj?"Pendaftaran sebelumnya ditolak. Pengajuan baru sudah dikirim ke pengawas, tunggu persetujuannya lalu masuk lagi.":"Pendaftaran terkirim. Tunggu persetujuan pengawas, lalu masuk lagi.")},function(){say("Gagal mendaftar, coba lagi.")})}
+  var rj=false,mv=false;
+  if(g&&g.npsn===n){mv=g.pw!==OWN[n].uid;rj=!!(d&&d.npsn===n&&d.ts>g.ts);if(!rj&&!mv){say("Pendaftaran Anda masih menunggu persetujuan pengawas.");return}}
+  DB.doc("reg/"+UID).set({npsn:n,ts:Date.now(),pw:OWN[n].uid,name:(AUTH.currentUser.displayName||AUTH.currentUser.email),email:AUTH.currentUser.email}).then(function(){say(mv?"Pengawas sekolah Anda telah berubah. Pengajuan baru sudah dikirim ke pengawas yang baru, tunggu persetujuannya lalu masuk lagi.":rj?"Pendaftaran sebelumnya ditolak. Pengajuan baru sudah dikirim ke pengawas, tunggu persetujuannya lalu masuk lagi.":"Pendaftaran terkirim. Tunggu persetujuan pengawas, lalu masuk lagi.")},function(){say("Gagal mendaftar, coba lagi.")})}
 function approve(u,n){if(APPR[n]){toast("Sekolah ini sudah memiliki operator yang disetujui");return}
-  DB.doc("appr/"+n).set({uid:u,ts:Date.now(),pw:UID}).then(function(){toast("Operator disetujui")},fail)}
+  DB.doc("appr/"+n).set({uid:u,ts:Date.now(),pw:(OWN[n]||{uid:UID}).uid}).then(function(){toast("Operator disetujui")},fail)}
 function addSchool(n,nama){if(!n){toast("Pilih sekolah dulu");return}
-  if(Object.keys((BIN[UID]||{}).schools||{}).length>=MAX_SEKOLAH){toast("Satu pengawas maksimal "+MAX_SEKOLAH+" sekolah binaan");return}
-  if(OWN[n]){toast(OWN[n].uid===UID?"Sekolah sudah ada di daftar binaan Anda":"Sekolah ini sudah menjadi binaan pengawas lain");return}
-  var sc=Object.assign({},(BIN[UID]||{}).schools||{});sc[n]={nama:nama,ts:Date.now()};
-  DB.doc("binaan/"+UID).set({schools:sc}).then(function(){toast("Sekolah ditambahkan")},fail)}
-function delSchool(n){var sc=Object.assign({},(BIN[UID]||{}).schools||{});delete sc[n];
-  DB.doc("binaan/"+UID).set({schools:sc}).then(function(){if(APPR[n])DB.doc("appr/"+n).delete();toast("Sekolah dilepas")},fail)}
+  if(Object.keys((BIN[tp()]||{}).schools||{}).length>=MAX_SEKOLAH){toast("Satu pengawas maksimal "+MAX_SEKOLAH+" sekolah binaan");return}
+  if(OWN[n]){toast(OWN[n].uid===tp()?"Sekolah sudah ada di daftar binaan Anda":"Sekolah ini sudah menjadi binaan pengawas lain");return}
+  var sc=Object.assign({},(BIN[tp()]||{}).schools||{});sc[n]={nama:nama,ts:Date.now()};
+  DB.doc("binaan/"+tp()).set({schools:sc}).then(function(){toast("Sekolah ditambahkan")},fail);return true}
+function delSchool(n){var sc=Object.assign({},(BIN[tp()]||{}).schools||{});delete sc[n];
+  DB.doc("binaan/"+tp()).set({schools:sc}).then(function(){if(APPR[n])DB.doc("appr/"+n).delete();toast("Sekolah dilepas")},fail)}
+
+var TP=null,OWNERUID=null,MAS={},SEL=new Set();MASTER.forEach(function(x){MAS[x[0]]=x[1]});
+function tp(){return TP||UID}
+function selReset(){SEL=new Set(Object.keys((BIN[tp()]||{}).schools||{}));$("bq").value=""}
+function selCount(){$("bcnt").textContent="(dipilih "+SEL.size+" dari "+MAX_SEKOLAH+")"}
+function chkRender(){
+  var own=(BIN[tp()]||{}).schools||{},q=$("bq").value.trim().toLowerCase(),L={};
+  Object.keys(MAS).forEach(function(n){L[n]=MAS[n]});Object.keys(own).forEach(function(n){if(!L[n])L[n]=own[n].nama});
+  var arr=Object.keys(L).map(function(n){return [n,L[n]]}).filter(function(a){return !q||a[0].indexOf(q)>=0||String(a[1]).toLowerCase().indexOf(q)>=0}).sort(function(a,b){return String(a[1]).localeCompare(String(b[1]))});
+  $("bchk").innerHTML=arr.length?arr.map(function(a){var n=a[0],o=OWN[n],other=!!(o&&o.uid!==tp()&&!o.dflt);
+    return '<label style="display:flex;gap:8px;align-items:center;padding:4px 2px;'+(other?'opacity:.55':'')+'"><input type="checkbox" data-bc="'+esc(n)+'"'+(SEL.has(n)?' checked':'')+(other?' disabled':'')+'><span>'+esc(a[1])+' <small class="note">'+esc(n)+(other?' · binaan pengawas lain':'')+'</small></span></label>'}).join(""):"Tidak ada sekolah yang cocok.";
+  selCount()}
+function openOps(){TP=UID;selReset();chkRender();$("dop").showModal();opList()}
+$("bq").addEventListener("input",chkRender);
+$("tpw").addEventListener("change",function(){TP=this.value;selReset();chkRender()});
+$("bchk").addEventListener("change",function(e){var t=e.target;if(!t.dataset||!t.dataset.bc)return;
+  if(t.checked){if(SEL.size>=MAX_SEKOLAH){t.checked=false;toast("Maksimal "+MAX_SEKOLAH+" sekolah binaan");return}SEL.add(t.dataset.bc)}else SEL.delete(t.dataset.bc);selCount()});
+async function saveSel(){
+  var cur=(BIN[tp()]||{}).schools||{},ns={},removed=[];
+  if(SEL.size>MAX_SEKOLAH){toast("Maksimal "+MAX_SEKOLAH+" sekolah binaan");return}
+  SEL.forEach(function(n){ns[n]=cur[n]||{nama:MAS[n]||"Sekolah "+n,ts:Date.now()}});
+  Object.keys(cur).forEach(function(n){if(!SEL.has(n))removed.push(n)});
+  var fresh=Object.keys(ns).filter(function(n){return !cur[n]}),blocked=[];
+  for(var i=0;i<fresh.length;i++){try{var ax=await DB.doc("appr/"+fresh[i]).get();if(ax.exists&&(ax.data()||{}).pw!==tp())blocked.push(ns[fresh[i]].nama)}catch(e){}}
+  if(blocked.length){toast("Sudah punya operator yang disetujui admin/pengawas lain: "+blocked.join(", ")+". Hubungi admin utama.");return}
+  var linked=removed.filter(function(n){return APPR[n]});
+  if(linked.length&&!confirm("Melepas "+linked.length+" sekolah yang sudah punya operator akan memutus akun operatornya. Lanjutkan?"))return;
+  try{await DB.doc("binaan/"+tp()).set({schools:ns});linked.forEach(function(n){DB.doc("appr/"+n).delete()});toast("Pilihan sekolah binaan disimpan")}catch(e){fail()}}
+function parseMas(t){var o={},bad=0;t.split(/\r?\n/).forEach(function(l){l=l.trim();if(!l)return;var m=/^(\d{5,10})\s*[;,\t]\s*(.+)$/.exec(l);if(m)o[m[1]]=m[2].trim().toUpperCase();else bad++});return {o:o,bad:bad}}
+async function masAdd(){var r=parseMas($("mta").value),n=Object.keys(r.o).length;
+  if(!n){toast("Format: NPSN;NAMA SEKOLAH, satu per baris");return}
+  try{await DB.doc("master/sekolah").set({schools:Object.assign({},MAS,r.o),ownerUid:UID});$("mta").value="";toast(n+" sekolah ditambahkan/diperbarui"+(r.bad?", "+r.bad+" baris dilewati":""))}catch(e){fail()}}
+async function masDel(){var n=$("mdn").value.trim();if(!MAS[n]){toast("NPSN tidak ada di daftar");return}
+  var o=Object.assign({},MAS);delete o[n];try{await DB.doc("master/sekolah").set({schools:o,ownerUid:UID});$("mdn").value="";toast("Dihapus dari daftar")}catch(e){fail()}}
 function notPw(){$("lmsg").textContent="Akun ini belum terdaftar sebagai pengawas. Anda bisa mengajukan agar disetujui admin utama.";$("reqp").hidden=false}
 async function reqPw(){var u=AUTH.currentUser;if(!u)return;
   try{await DB.doc("preq/"+UID).set({name:u.displayName||u.email,email:u.email,ts:Date.now()});$("lmsg").textContent="Pengajuan terkirim. Setelah disetujui admin utama, muat ulang halaman lalu klik Pengawas.";$("reqp").hidden=true}
   catch(e){$("lmsg").textContent="Gagal mengirim pengajuan. Coba lagi."}}
-function ownList(){var ob=$("ownbox");ob.hidden=!ME.owner;if(!ME.owner)return;
+function ownList(){var ob=$("ownbox");ob.hidden=!ME.owner;$("tpbox").hidden=!ME.owner;if(!ME.owner)return;
+  var cv=tp(),oh='<option value="'+UID+'">Saya (admin utama)</option>';Object.keys(ADM).forEach(function(u){if(u!==UID)oh+='<option value="'+esc(u)+'">'+esc(pwName(u))+'</option>'});$("tpw").innerHTML=oh;$("tpw").value=cv;
+  $("mcnt").textContent=Object.keys(MAS).length+" sekolah di daftar master. Sekolah yang belum dicentang pengawas otomatis menjadi binaan Anda.";
   var pk=Object.keys(PREQ).filter(function(u){return !ADM[u]});
   $("pq").innerHTML=pk.length?pk.map(function(u){return '<div class="rowx">'+esc(PREQ[u].name||"Tanpa nama")+' ('+esc(PREQ[u].email||"")+') <button class="btn go" data-pok="'+esc(u)+'">Setujui</button> <button class="btn" data-prej="'+esc(u)+'">Tolak</button></div>'}).join(""):"Tidak ada permintaan.";
   $("pl").innerHTML=Object.keys(ADM).map(function(u){var a=ADM[u]||{};
     return '<div class="rowx">'+(u===UID?"Anda (admin utama)":esc(a.name||("UID "+u.slice(0,8)+"..."))+(a.email?" ("+esc(a.email)+")":""))+((u===UID||a.owner)?"":' <button class="btn" data-pdel="'+esc(u)+'">Cabut</button>')+'</div>'}).join("")||"Belum ada data."}
 function pwOk(u){var q=PREQ[u]||{};DB.doc("admins/"+u).set({ok:true,name:q.name||"",email:q.email||"",by:UID,ts:Date.now()}).then(function(){return DB.doc("preq/"+u).delete()}).then(function(){toast("Pengawas disetujui")},fail)}
 async function opList(){ownList();
-  var L=mine(),P=pend(),ids=[];P.forEach(function(p){ids.push(p.uid)});L.forEach(function(s){if(APPR[s.npsn])ids.push(APPR[s.npsn].uid)});
+  var L=ME.owner?SCH:mine(),P=pend(),ids=[];P.forEach(function(p){ids.push(p.uid)});L.forEach(function(s){if(APPR[s.npsn])ids.push(APPR[s.npsn].uid)});
   ids=ids.filter(function(i){return i.indexOf("seed-")!==0});var ps={};
   Object.keys(REG).forEach(function(u){ps[u]=REG[u]});
   var nm=function(u){return u.indexOf("seed-")===0?"Operator arsip awal":esc((ps[u]&&(ps[u].name||ps[u].email))||"Pengguna")};
-  $("bl").innerHTML=L.length?L.map(function(s){return '<div class="rowx">'+esc(s.nama)+' <button class="btn" data-bdel="'+esc(s.npsn)+'">Lepas</button></div>'}).join(""):"Belum ada sekolah binaan.";
-  $("bm").innerHTML=MASTER.filter(function(s){return !OWN[s[0]]}).map(function(s){return '<option value="'+s[0]+'">'+esc(s[1])+'</option>'}).join("");
-  $("rq").innerHTML=P.length?P.map(function(p){return '<div class="rowx">'+nm(p.uid)+' mendaftar di '+esc(OWN[p.npsn].nama)+' <button class="btn go" data-ok="'+esc(p.uid)+'" data-sc="'+esc(p.npsn)+'">Setujui</button> <button class="btn" data-rej="'+esc(p.uid)+'" data-sc="'+esc(p.npsn)+'">Tolak</button></div>'}).join(""):"Tidak ada permintaan.";
+  $("rq").innerHTML=P.length?P.map(function(p){return '<div class="rowx">'+nm(p.uid)+' mendaftar di '+esc(OWN[p.npsn].nama)+(OWN[p.npsn].uid!==UID?' <small class="note">(pengawas: '+esc((ADM[OWN[p.npsn].uid]||{}).name||(ADM[OWN[p.npsn].uid]||{}).email||'lain')+')</small>':'')+' <button class="btn go" data-ok="'+esc(p.uid)+'" data-sc="'+esc(p.npsn)+'">Setujui</button> <button class="btn" data-rej="'+esc(p.uid)+'" data-sc="'+esc(p.npsn)+'">Tolak</button></div>'}).join(""):"Tidak ada permintaan.";
   var A=L.filter(function(s){return APPR[s.npsn]});
   $("ap").innerHTML=A.length?A.map(function(s){return '<div class="rowx">'+nm(APPR[s.npsn].uid)+', '+esc(s.nama)+' <button class="btn" data-adel="'+esc(s.npsn)+'">Hapus akun</button></div>'}).join(""):"Belum ada operator yang disetujui.";
 }
@@ -427,16 +472,18 @@ document.addEventListener("click",function(e){
   else if(d.mv){mvEd(+d.i,+d.mv)}
   else if(d.rm){if(confirm("Hapus aktivitas ini? Dokumen dan status validasinya tidak akan tampil lagi.")){EDIT.splice(+d.i,1);edRender()}}
   else if(d.ok)approve(d.ok,d.sc);
-  else if(d.rej)DB.doc("dec/"+d.rej).set({npsn:d.sc,ts:Date.now(),pw:UID}).then(function(){toast("Permintaan ditolak")},fail);
+  else if(d.rej)DB.doc("dec/"+d.rej).set({npsn:d.sc,ts:Date.now(),pw:(OWN[d.sc]||{uid:UID}).uid}).then(function(){toast("Permintaan ditolak")},fail);
   else if(d.adel)DB.doc("appr/"+d.adel).delete().then(function(){toast("Akun operator dihapus. Sekolah bisa didaftar ulang.")},fail);
   else if(d.bdel)delSchool(d.bdel);
   else if(d.pok)pwOk(d.pok)
   else if(d.prej)DB.doc("preq/"+d.prej).delete().then(function(){toast("Permintaan ditolak")},fail)
   else if(d.pdel){if(confirm("Cabut hak pengawas akun ini? Sekolah binaannya tetap tersimpan."))DB.doc("admins/"+d.pdel).delete().then(function(){toast("Hak pengawas dicabut")},fail)}
   else if(b.id==="reqp")reqPw()
-  else if(b.id==="badd")addSchool($("bm").value,(MASTER.filter(function(s){return s[0]===$("bm").value})[0]||[])[1]);
-  else if(b.id==="bcus"){var n=$("bn").value.trim(),nm=$("bnm").value.trim();if(!/^\d{5,10}$/.test(n)||!nm){toast("Isi NPSN (angka) dan nama sekolah");return}addSchool(n,nm.toUpperCase());$("bn").value="";$("bnm").value=""}
-  else if(b.id==="ops"){$("dop").showModal();opList()}
+  else if(b.id==="bcus"){var n=$("bn").value.trim(),nm=$("bnm").value.trim();if(!/^\d{5,10}$/.test(n)||!nm){toast("Isi NPSN (angka) dan nama sekolah");return}if(addSchool(n,nm.toUpperCase())){SEL.add(n);chkRender()}$("bn").value="";$("bnm").value=""}
+  else if(b.id==="ops")openOps()
+  else if(b.id==="bsave")saveSel()
+  else if(b.id==="madd")masAdd()
+  else if(b.id==="mdel")masDel()
   else if(d.open)location.hash="sekolah-"+d.open;
   else if(b.id==="toDash"){var tl=mine(),tg=(cur&&tl.some(function(x){return x.npsn===cur.npsn}))?cur:tl[0];if(tg)location.hash="sekolah-"+tg.npsn;else toast("Belum ada sekolah binaan. Tambahkan lewat tombol Kelola akun.")}
   else if(b.id==="guide")$("dlg").showModal();
@@ -527,7 +574,7 @@ $("edl").addEventListener("input",function(e){var t=e.target;if(t.dataset&&t.dat
 async function saveEd(){
   if(!EDIT.length){toast("Daftar tidak boleh kosong");return}
   for(var i=0;i<EDIT.length;i++){if(!EDIT[i].tahap.trim()||!EDIT[i].akt.trim()){toast("Baris "+(i+1)+": Tahap dan Aktivitas wajib diisi");return}}
-  try{await DB.doc("acts/"+UID).set({list:EDIT.map(function(a){return {id:a.id,tahap:a.tahap.trim(),akt:a.akt.trim(),ket:(a.ket||"").trim()}})});$("ded").close();toast("Daftar dokumen disimpan")}catch(e){fail()}}
+  try{await DB.doc("acts/"+((cur&&cur.pw)||UID)).set({list:EDIT.map(function(a){return {id:a.id,tahap:a.tahap.trim(),akt:a.akt.trim(),ket:(a.ket||"").trim()}})});$("ded").close();toast("Daftar dokumen disimpan")}catch(e){fail()}}
 async function startLive(u){
   if(LIVE)return;
   try{UID=u.uid;
@@ -542,17 +589,23 @@ async function startLive(u){
     qs("binaan",DB.collection("binaan"),idf,function(o){BIN=o});
     qs("acts",DB.collection("acts"),function(x){return x.list||[]},function(o){ACTS=o});
     if(ME.admin){
-      ds("verif",DB.doc("verif/"+UID),function(x){return x.st||{}},function(v){VER=v?{[UID]:v}:{}});
-      qs("reg",DB.collection("reg").where("pw","==",UID),idf,function(o){REG=o});
-      qs("appr",DB.collection("appr").where("pw","==",UID),idf,function(o){APPR=o});
-      qs("subs",DB.collection("subs").where("pw","==",UID),function(x){return x.items||{}},function(o){SUBS=o});
-      qs("dec",DB.collection("dec").where("pw","==",UID),idf,function(o){DEC=o});
+      if(ME.owner)qs("verif",DB.collection("verif"),function(x){return x.st||{}},function(o){VER=o});
+      else ds("verif",DB.doc("verif/"+UID),function(x){return x.st||{}},function(v){VER=v?{[UID]:v}:{}});
+      var oq=function(c){return ME.owner?DB.collection(c):DB.collection(c).where("pw","==",UID)};
+      qs("reg",oq("reg"),idf,function(o){REG=o});
+      qs("appr",oq("appr"),idf,function(o){APPR=o});
+      qs("subs",ME.owner?DB.collection("subs"):DB.collection("subs").where("pw","==",UID),function(x){return x.items||{}},function(o){SUBS=o});
+      qs("dec",oq("dec"),idf,function(o){DEC=o});
     }else{
       ds("reg",DB.doc("reg/"+UID),idf,function(v){REG=v?{[UID]:v}:{}});
       ds("dec",DB.doc("dec/"+UID),idf,function(v){DEC=v?{[UID]:v}:{}});
       ds("subs",DB.doc("subs/"+UID),function(x){return x.items||{}},function(v){SUBS=v?{[UID]:v}:{}});
       qs("appr",DB.collection("appr").where("uid","==",UID),idf,function(o){APPR=o});
     }
+    DB.doc("master/sekolah").onSnapshot(function(x){MAS={};if(x.exists){var sc=(x.data()||{}).schools||{};Object.keys(sc).forEach(function(n){MAS[n]=sc[n]})}else MASTER.forEach(function(m){MAS[m[0]]=m[1]});
+      OWNERUID=x.exists?((x.data()||{}).ownerUid||null):null;
+      if(ME.owner&&OWNERUID!==UID&&!window.ENS){window.ENS=1;DB.doc("master/sekolah").set({schools:MAS,ownerUid:UID}).catch(function(){})}
+      if(MR)sync();if($("dop").open){chkRender();ownList()}},er);
     if(ME.owner){
       DB.collection("admins").onSnapshot(function(c){var o={};c.docs.forEach(function(x){o[x.id]=x.data()});ADM=o;if(MR)sync()},er);
       DB.collection("preq").onSnapshot(function(c){var o={};c.docs.forEach(function(x){o[x.id]=x.data()});PREQ=o;if(MR)sync()},er);
