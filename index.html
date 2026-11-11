@@ -97,7 +97,7 @@ tr:target td,tr.flash td{background:var(--warn-bg)}
 <div class="tablebox"><table><thead><tr><th>No</th><th>NPSN</th><th>Nama sekolah</th><th>Kabupaten</th><th>Kecamatan</th><th>Jenjang</th><th>Progres validasi</th><th>Aksi</th></tr></thead><tbody id="tl"></tbody></table></div>
 <div class="foot"><button class="btn" id="toDash">Kembali ke dashboard</button> <button class="btn" id="home2">Halaman awal</button></div>
 </div></div>
-<dialog id="dlg"><h2>Panduan SPMI</h2><ol><li>Pengawas menambahkan sekolah binaannya lewat Kelola sekolah dan operator.</li><li>Operator memilih sekolahnya di halaman Satuan Pendidikan lalu mendaftar. Pengawas menyetujui atau menolak.</li><li>Satu sekolah hanya bisa memiliki satu operator. Pengawas bisa menghapus akun operator agar sekolah bisa didaftar ulang.</li><li>Operator menempelkan tautan Google Drive dokumen (bagikan dengan "siapa saja yang memiliki link"), pengawas memverifikasi. Jika dokumen diganti, status kembali menunggu.</li></ol><button class="btn" onclick="this.parentNode.close()">Tutup</button></dialog>
+<dialog id="dlg"><h2>Panduan SPMI</h2><ol><li>Pengawas menambahkan sekolah binaannya lewat Kelola sekolah dan operator.</li><li>Operator memilih sekolahnya di halaman Satuan Pendidikan lalu mendaftar. Pengawas menyetujui atau menolak.</li><li>Satu sekolah hanya bisa memiliki satu operator. Pengawas bisa menghapus akun operator agar sekolah bisa didaftar ulang.</li><li>Operator mengunggah dokumen (Excel, Word, PDF, foto/gambar, maksimal 10 MB), pengawas memverifikasi. Jika dokumen diganti, status kembali menunggu.</li></ol><button class="btn" onclick="this.parentNode.close()">Tutup</button></dialog>
 <dialog id="dop"><h2>Kelola sekolah dan operator</h2>
 <h3>Sekolah binaan</h3><div id="bl"></div>
 <select id="bm" style="width:100%;padding:8px;margin:8px 0"></select><button class="btn go" id="badd">Tambah dari daftar</button>
@@ -166,9 +166,13 @@ tr:target td,tr.flash td{background:var(--warn-bg)}
 <p id="cmsg" style="min-height:1.4em;margin:4px 0"></p>
 <button class="btn go" id="cpb" type="button">Ubah kata sandi</button>
 <p style="margin-top:14px"><button class="btn" id="logout" type="button">Keluar</button> <button class="btn" type="button" onclick="this.closest('dialog').close()">Tutup</button></p></dialog>
-<dialog id="dlk"><h2>Tautan dokumen</h2><p class="note">Unggah dokumen ke Google Drive sekolah, atur berbagi ke "Siapa saja yang memiliki link", lalu tempel tautannya.</p>
-<input id="lku" placeholder="https://drive.google.com/..." style="width:100%;padding:8px;margin:4px 0"><input id="lkn" placeholder="Nama dokumen (opsional)" style="width:100%;padding:8px;margin:4px 0">
-<p style="margin-top:10px"><button class="btn go" id="lks">Simpan</button> <button class="btn" onclick="this.closest('dialog').close()">Batal</button></p></dialog>
+<dialog id="dlk"><h2>Unggah dokumen</h2>
+<p class="note" id="lkh">Format yang bisa diunggah: Excel, Word, PDF, foto/gambar. Maksimal 10 MB.</p>
+<input type="file" id="lkf" accept=".xls,.xlsx,.doc,.docx,.pdf,.jpg,.jpeg,.png,.gif,.webp,image/*" style="width:100%;padding:8px;margin:4px 0">
+<details id="lkd" style="margin:6px 0"><summary>Atau tempel tautan Google Drive</summary>
+<input id="lku" placeholder="https://drive.google.com/..." style="width:100%;padding:8px;margin:4px 0"><input id="lkn" placeholder="Nama dokumen (opsional)" style="width:100%;padding:8px;margin:4px 0"></details>
+<p id="lkm" style="min-height:1.4em;margin:4px 0"></p>
+<p><button class="btn go" id="lks" type="button">Simpan</button> <button class="btn" type="button" onclick="this.closest('dialog').close()">Batal</button></p></dialog>
 <dialog id="ded"><h2>Kelola daftar dokumen</h2><p class="note">Berlaku untuk semua sekolah binaan Anda. Kolom: Tahap, Aktivitas/dokumen yang diminta, Keterangan.</p>
 <div id="edl"></div><p style="margin-top:10px"><button class="btn" id="eadd">Tambah aktivitas</button> <button class="btn go" id="esave">Simpan</button> <button class="btn" onclick="this.closest('dialog').close()">Batal</button></p></dialog>
 <div id="toast" role="status"></div>
@@ -179,6 +183,8 @@ tr:target td,tr.flash td{background:var(--warn-bg)}
 <script>
 /* ISI DENGAN firebaseConfig DARI PROYEK FIREBASE ANDA */
 var FB_CONFIG={apiKey:"AIzaSyAM5qvRIohz9TIICxq4qdBNwX_3tMWBSBE",authDomain:"spmi-sekolah-binaan.firebaseapp.com",projectId:"spmi-sekolah-binaan",storageBucket:"spmi-sekolah-binaan.firebasestorage.app",messagingSenderId:"827764477635",appId:"1:827764477635:web:60fa6d974196d4f8c09c76"};
+/* ISI DARI AKUN CLOUDINARY (gratis): Cloud name dan nama Upload preset (Unsigned) */
+var CLD={cloud:"ISI_CLOUD_NAME",preset:"ISI_UPLOAD_PRESET"};
 var BASE=[
 ["Implementasi SPMI","Pemantauan dan evaluasi","29-11-2025 14:47"],
 ["Implementasi SPMI","Pelaksanaan","29-11-2025 14:46"],
@@ -215,7 +221,7 @@ function demo(){SCH=MASTER.map(function(s,i){var rs=rows();if(i===0)rs.forEach(f
 function owners(){var o={};Object.keys(BIN).forEach(function(u){var sc=(BIN[u]||{}).schools||{};Object.keys(sc).forEach(function(n){var t=sc[n].ts||0;if(!o[n]||t<o[n].ts)o[n]={uid:u,ts:t,nama:sc[n].nama}})});return o}
 function mine(){return SCH.filter(function(s){return !LIVE||s.pw===UID})}
 function pemb(){return !LIVE||(ME.role==="pengawas"&&!!cur&&cur.pw===UID)}
-function opCan(){return LIVE&&ME.role==="sekolah"&&!!cur&&ME.npsn===cur.npsn&&!!AS}
+function opCan(){return LIVE&&ME.role==="sekolah"&&!!cur&&ME.npsn===cur.npsn}
 function stamp(){var d=new Date(),p=function(n){return String(n).padStart(2,"0")};return p(d.getDate())+"-"+p(d.getMonth()+1)+"-"+d.getFullYear()+" "+p(d.getHours())+":"+p(d.getMinutes())}
 function docCell(r){if(!r.file)return "-";if(r.file.url)return '<a class="btn" href="'+esc(r.file.url)+'" target="_blank" rel="noopener noreferrer">Buka dokumen</a><br><small>'+esc(r.file.n)+'</small>';return '<button class="btn" data-doc="'+r.no+'">Lihat/Unduh</button>'}
 function actCell(r){var h="";if(opCan())h+='<button class="btn go" data-up="'+r.no+'">'+(r.file?"Ganti dokumen":"Unggah dokumen")+'</button>';if(pemb())h+='<div class="acts"><button class="btn'+(r.st==="valid"?" on":"")+'" data-set="valid" data-no="'+r.no+'">Valid</button><button class="btn'+(r.st==="belum"?" on":"")+'" data-set="belum" data-no="'+r.no+'">Belum valid</button><button class="btn" data-set="menunggu" data-no="'+r.no+'">Batal validasi</button></div>';return h}
@@ -338,7 +344,7 @@ document.addEventListener("click",function(e){
   if(d.login){goLogin(d.login)}
   else if(b.id.indexOf("home")===0)location.hash="masuk";
   else if(b.id==="pgo")pgo();
-  else if(d.up){upNo=+d.up;$("lku").value="";$("lkn").value="";$("dlk").showModal()}
+  else if(d.up){upNo=+d.up;upOpen()}
   else if(b.id==="lks")saveLink()
   else if(b.id==="tin")setMode("in")
   else if(b.id==="tup")setMode("up")
@@ -412,11 +418,37 @@ async function changePw(){var u=AUTH.currentUser,cm=$("cmsg"),cur=$("cpw").value
     $("cpw").value=$("npw").value="";say2("Kata sandi berhasil diubah.",true)}
   catch(e){say2(AERR[e.code]||("Gagal: "+(e.message||e)))}}
 $("dauth").addEventListener("keydown",function(e){if(e.key==="Enter"&&e.target.tagName==="INPUT"){e.preventDefault();authSubmit()}});
-async function saveLink(){var u=$("lku").value.trim(),n=$("lkn").value.trim(),row=D[upNo-1];
-  if(!/^https:\/\/\S+$/.test(u)){toast("Tempel tautan lengkap yang diawali https://");return}
+var CLDOK=CLD.cloud.indexOf("ISI")!==0&&CLD.preset.indexOf("ISI")!==0,UPBUSY=false;
+function lkm(t,ok){var m=$("lkm");m.textContent=t;m.style.color=ok?"#1a7f4b":"#d9364a"}
+function upOpen(){$("lku").value="";$("lkn").value="";$("lkf").value="";lkm("");$("lks").disabled=false;UPBUSY=false;
+  $("lkf").hidden=!CLDOK;$("lkd").open=!CLDOK;
+  $("lkh").textContent=CLDOK?"Format yang bisa diunggah: Excel, Word, PDF, foto/gambar. Maksimal 10 MB.":"Penyimpanan file belum diatur oleh pemilik dashboard. Sementara, tempel tautan Google Drive.";
+  $("dlk").showModal()}
+function cldUp(f){return new Promise(function(res,rej){
+  var ext=(/\.([A-Za-z0-9]+)$/.exec(f.name)||[,""])[1].toLowerCase(),img=/^(jpe?g|png|gif|webp)$/.test(ext);
+  var base=f.name.replace(/\.[^.]+$/,"").replace(/[^A-Za-z0-9_-]+/g,"-").slice(0,40)||"dokumen";
+  var fd=new FormData();fd.append("file",f);fd.append("upload_preset",CLD.preset);
+  fd.append("public_id","spmi/"+UID.slice(0,8)+"-"+Date.now().toString(36)+"-"+base+(img?"":"."+ext));
+  var x=new XMLHttpRequest();x.open("POST","https://api.cloudinary.com/v1_1/"+CLD.cloud+"/auto/upload");
+  x.upload.onprogress=function(e){if(e.lengthComputable)lkm("Mengunggah "+Math.round(e.loaded/e.total*100)+"%",true)};
+  x.onload=function(){var j={};try{j=JSON.parse(x.responseText)}catch(e){}
+    if(x.status>=200&&x.status<300&&j.secure_url)res(j.secure_url);else rej(new Error((j.error&&j.error.message)||("Kode "+x.status)))};
+  x.onerror=function(){rej(new Error("Koneksi gagal"))};x.send(fd)})}
+async function saveLink(){if(UPBUSY)return;
+  var f=$("lkf").files[0],u=$("lku").value.trim(),n=$("lkn").value.trim(),row=D[upNo-1],url,name;
   if(!row||!opCan())return;
-  var items=Object.assign({},SUBS[UID]||{});items[row.id]={n:n||"Dokumen",url:u,at:stamp()};
-  try{await DB.doc("subs/"+UID).set({items:items});$("dlk").close();toast("Tautan tersimpan")}catch(e){fail()}}
+  if(f&&CLDOK){
+    if(!/\.(xlsx?|docx?|pdf|jpe?g|png|gif|webp)$/i.test(f.name)){lkm("Format tidak didukung. Pilih Excel, Word, PDF, atau foto/gambar.");return}
+    if(f.size>10*1048576){lkm("Ukuran file melebihi 10 MB.");return}
+    UPBUSY=true;$("lks").disabled=true;lkm("Mengunggah 0%",true);
+    try{url=await cldUp(f);name=f.name}catch(e){UPBUSY=false;$("lks").disabled=false;lkm("Gagal mengunggah: "+e.message);return}
+  }else if(u){
+    if(!/^https:\/\/\S+$/.test(u)){lkm("Tautan harus lengkap dan diawali https://");return}
+    url=u;name=n||"Dokumen"
+  }else{lkm("Pilih file atau tempel tautan dulu.");return}
+  var items=Object.assign({},SUBS[UID]||{});items[row.id]={n:name,url:url,at:stamp()};
+  try{await DB.doc("subs/"+UID).set({items:items});$("dlk").close();toast("Dokumen tersimpan")}catch(e){fail()}
+  UPBUSY=false;$("lks").disabled=false}
 function openEd(){EDIT=D.map(function(r){return {id:r.id,tahap:r.tahap,akt:r.akt,ket:r.ket||""}});edRender();$("ded").showModal()}
 function edRender(){$("edl").innerHTML=EDIT.map(function(a,i){var f=function(k,p){return '<input data-f="'+k+'" data-i="'+i+'" value="'+esc(a[k])+'" placeholder="'+p+'">'};
   return '<div class="edr"><b>'+(i+1)+'</b>'+f("tahap","Tahap")+f("akt","Aktivitas / dokumen yang diminta")+f("ket","Keterangan")+'<span><button class="btn" data-mv="-1" data-i="'+i+'">↑</button> <button class="btn" data-mv="1" data-i="'+i+'">↓</button> <button class="btn" data-rm="1" data-i="'+i+'">Hapus</button></span></div>'}).join("")||"Daftar kosong."}
