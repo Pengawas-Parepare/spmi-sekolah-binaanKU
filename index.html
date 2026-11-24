@@ -160,6 +160,7 @@ tr:target td,tr.flash td{background:var(--warn-bg)}
 <div id="vDaftar" hidden><div class="wrap">
 <div class="top"><h1>Daftar sekolah binaan anda</h1><span><button class="btn" id="ops" hidden>Kelola akun</button> <button class="btn" id="guide">Panduan SPMI</button></span></div>
 <p class="note">Status validasi di daftar ini sama dengan yang ada di laporan masing-masing sekolah.</p>
+<p id="pnote" hidden style="margin:0 0 12px;padding:8px 12px;border-radius:8px;background:var(--warn-bg);color:var(--warn);font-weight:500"></p>
 <div class="cg" id="cg"></div>
 <div class="tablebox"><table><thead><tr><th>No</th><th>NPSN</th><th>Nama sekolah</th><th>Kabupaten</th><th>Kecamatan</th><th>Jenjang</th><th>Progres validasi</th><th>Aksi</th></tr></thead><tbody id="tl"></tbody></table></div>
 <div class="foot"><button class="btn" id="toDash">Kembali ke dashboard</button> <button class="btn" id="home2">Halaman awal</button></div>
@@ -433,7 +434,7 @@ function route(e){
   if(m){cur=find(m[1]);D=cur.rows}
   $("vHome").hidden=h!=="masuk";$("vPick").hidden=h!=="pilih";$("vDaftar").hidden=h!=="daftar";$("vLap").hidden=!m;
   $("back").hidden=LIVE&&R==="sekolah";$("ops").hidden=!(LIVE&&R==="pengawas");
-  if(LIVE&&R==="pengawas"){var n=pend().length+(ME.owner?Object.keys(PREQ).filter(function(u){return !ADM[u]}).length:0);$("ops").textContent="Kelola sekolah dan operator"+(n?" ("+n+")":"")}
+  if(LIVE&&R==="pengawas"){var n=pend().length+(ME.owner?Object.keys(PREQ).filter(function(u){return !ADM[u]}).length:0);$("ops").textContent="Kelola sekolah dan operator"+(n?" ("+n+")":"");var pp=ME.owner?Object.keys(PREQ).filter(function(u){return !ADM[u]}).length:0;$("pnote").hidden=!pp;if(pp)$("pnote").textContent="Ada "+pp+" pengajuan pengawas baru menunggu persetujuan Anda. Buka Kelola sekolah dan operator, bagian Permintaan pengawas."}
   $("role").textContent=!LIVE?"Mode demo: belum terhubung ke akun, perubahan tidak tersimpan.":RL[R]?"Masuk sebagai "+RL[R]:"";
   if(h==="pilih"){var pv=$("ps").value;$("ps").innerHTML=SCH.length?SCH.map(function(x){return '<option value="'+esc(x.npsn)+'">'+esc(x.nama)+' ('+esc(x.npsn)+')</option>'}).join(""):'<option value="">Belum ada sekolah terdaftar</option>';if(pv)$("ps").value=pv;else if(ME.npsn)$("ps").value=ME.npsn}
   if(h==="daftar")listView();else if(m){$("chip").textContent=cur.nama+", NPSN "+cur.npsn;render()}
@@ -497,7 +498,7 @@ async function masDel(){var n=$("mdn").value.trim();if(!MAS[n]){toast("NPSN tida
 function notPw(){$("lmsg").textContent="Akun ini belum terdaftar sebagai pengawas. Anda bisa mengajukan agar disetujui admin utama.";$("reqp").hidden=false}
 async function reqPw(){var u=AUTH.currentUser;if(!u)return;
   try{await DB.doc("preq/"+UID).set({name:u.displayName||u.email,email:u.email,ts:Date.now()});$("lmsg").textContent="Pengajuan terkirim. Setelah disetujui admin utama, muat ulang halaman lalu klik Pengawas.";$("reqp").hidden=true}
-  catch(e){$("lmsg").textContent="Gagal mengirim pengajuan. Coba lagi."}}
+  catch(e){console.error(e);$("lmsg").textContent=(e&&e.code==="permission-denied")?"Pengajuan ditolak server: aturan Firestore untuk koleksi preq belum mengizinkan akun ini menulis. Hubungi admin utama.":"Gagal mengirim pengajuan ("+((e&&e.code)||"coba lagi")+")."}}
 function ownList(){var ob=$("ownbox");ob.hidden=!ME.owner;$("tpbox").hidden=!ME.owner;if(!ME.owner)return;
   var cv=tp(),oh='<option value="'+UID+'">Saya (admin utama)</option>';Object.keys(ADM).forEach(function(u){if(u!==UID)oh+='<option value="'+esc(u)+'">'+esc(pwName(u))+'</option>'});$("tpw").innerHTML=oh;$("tpw").value=cv;
   $("mcnt").textContent=Object.keys(MAS).length+" sekolah di daftar master. Sekolah yang belum dicentang pengawas otomatis menjadi binaan Anda.";
@@ -681,7 +682,7 @@ async function startLive(u){
       if(MR)sync();if($("dop").open){chkRender();ownList()}},er);
     if(ME.owner){
       DB.collection("admins").onSnapshot(function(c){var o={};c.docs.forEach(function(x){o[x.id]=x.data()});ADM=o;if(MR)sync()},er);
-      DB.collection("preq").onSnapshot(function(c){var o={};c.docs.forEach(function(x){o[x.id]=x.data()});PREQ=o;if(MR)sync()},er);
+      DB.collection("preq").onSnapshot(function(c){var o={};c.docs.forEach(function(x){o[x.id]=x.data()});PREQ=o;if(MR)sync()},function(e){console.error(e);toast("Permintaan pengawas tidak bisa dibaca"+((e&&e.code==="permission-denied")?": aturan Firestore koleksi preq belum mengizinkan admin utama membaca":""))});
     }
     $("out").hidden=false;$("out").textContent="Akun saya ("+u.email+")";
     sync();
