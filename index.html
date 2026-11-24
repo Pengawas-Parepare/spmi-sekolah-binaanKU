@@ -426,7 +426,7 @@ function charts(L){var el=$("cg");if(!L.length){el.innerHTML="";return}
 function listView(){var L=mine();charts(L);
   if(LIVE&&MR&&ME.role==="pengawas"&&!L.length&&!window.AUTOOP){window.AUTOOP=1;openOps()}
   $("tl").innerHTML=L.length?L.map(function(s,i){var v=s.rows.filter(function(r){return r.st==="valid"}).length;
-    return '<tr><td class="num">'+(i+1)+'</td><td>'+esc(s.npsn)+'</td><td>'+esc(s.nama)+(ME.owner&&s.pw!==UID?' <small class="note">('+esc(pwName(s.pw))+')</small>':'')+'</td><td>Kota Parepare</td><td>Kec. Bacukiki Barat</td><td>SD</td><td><div class="mini"><div><i style="width:'+Math.round(v/(s.rows.length||1)*100)+'%"></i></div>'+v+'/'+s.rows.length+'</div></td><td><button class="btn go" data-open="'+esc(s.npsn)+'">Lihat laporan SPMI</button></td></tr>'}).join(""):'<tr><td colspan="8" class="empty">Belum ada sekolah binaan. Tambahkan lewat tombol Kelola akun.</td></tr>';
+    return '<tr><td class="num">'+(i+1)+'</td><td>'+esc(s.npsn)+'</td><td>'+esc(s.nama)+(ME.owner&&s.pw!==UID?' <small class="note">('+esc(pwName(s.pw))+')</small>':'')+'</td><td>Kota Parepare</td><td>Kec. Bacukiki Barat</td><td>SD</td><td><div class="mini"><div><i style="width:'+Math.round(v/(s.rows.length||1)*100)+'%"></i></div>'+v+'/'+s.rows.length+'</div></td><td><button class="btn go" data-open="'+esc(s.npsn)+'">Lihat laporan SPMI</button>'+(LIVE&&ME.role==="pengawas"&&(ME.owner||s.pw===UID)?' <button class="btn rm" data-bdel="'+esc(s.npsn)+'">Hapus</button>':'')+'</td></tr>'}).join(""):'<tr><td colspan="8" class="empty">Belum ada sekolah binaan. Tambahkan lewat tombol Kelola akun.</td></tr>';
 }
 function route(e){
   var h=location.hash.slice(1)||"masuk",R=ME.role,m=/^sekolah-(\d+)$/.exec(h);
@@ -506,8 +506,13 @@ function addSchool(n,nama){if(!n){toast("Pilih sekolah dulu");return}
   if(OWN[n]){toast(OWN[n].uid===tp()?"Sekolah sudah ada di daftar binaan Anda":"Sekolah ini sudah menjadi binaan pengawas lain");return}
   var sc=Object.assign({},(BIN[tp()]||{}).schools||{});sc[n]={nama:nama,ts:Date.now()};
   DB.doc("binaan/"+tp()).set({schools:sc}).then(function(){toast("Sekolah ditambahkan")},fail);return true}
-function delSchool(n){var sc=Object.assign({},(BIN[tp()]||{}).schools||{});delete sc[n];
-  DB.doc("binaan/"+tp()).set({schools:sc}).then(function(){if(APPR[n])DB.doc("appr/"+n).delete();toast("Sekolah dilepas")},fail)}
+function delSchool(n){var o=OWN[n],pw=(o&&o.uid)||tp();
+  if(!LIVE||ME.role!=="pengawas"||!(ME.owner||pw===UID)){toast("Hanya admin atau pengawas pembina sekolah ini yang dapat menghapus");return}
+  var b=BIN[pw]||{},sc=Object.assign({},b.schools||{}),nm=(sc[n]&&sc[n].nama)||MAS[n]||("Sekolah "+n);
+  if(!sc[n]){toast("Sekolah ini tidak ada di daftar binaan");return}
+  if(!confirm("Hapus "+nm+" dari daftar sekolah binaan?"+(APPR[n]?" Akun operatornya juga akan diputus.":"")+" Dokumen yang sudah diunggah tidak ikut terhapus."))return;
+  delete sc[n];
+  DB.doc("binaan/"+pw).set({schools:sc}).then(function(){if(APPR[n])DB.doc("appr/"+n).delete();SEL.delete(n);if(location.hash==="#sekolah-"+n)location.hash="daftar";toast("Sekolah dihapus dari daftar binaan")},fail)}
 
 var TP=null,OWNERUID=null,MAS={},SEL=new Set();MASTER.forEach(function(x){MAS[x[0]]=x[1]});
 function tp(){return TP||UID}
