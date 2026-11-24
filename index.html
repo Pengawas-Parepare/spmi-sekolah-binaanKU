@@ -130,6 +130,8 @@ tr:target td,tr.flash td{background:var(--warn-bg)}
 .cv-foot p{margin:0;font-style:italic;font-size:1.05rem;display:flex;align-items:center;justify-content:center;gap:12px}
 .cv-foot p i{width:44px;height:2px;background:#d7a93a}
 @media(max-width:480px){.cv-foot p{font-size:.9rem;gap:8px}.cv-foot p i{width:22px}.cv-foot{padding:2px 12px 22px}}
+.btn.rm{border-color:#d9364a;color:#d9364a}
+.nt{font-size:.8rem;color:var(--warn);margin-top:4px;max-width:260px;white-space:normal}
 </style>
 </head>
 <body>
@@ -162,7 +164,7 @@ tr:target td,tr.flash td{background:var(--warn-bg)}
 <div class="tablebox"><table><thead><tr><th>No</th><th>NPSN</th><th>Nama sekolah</th><th>Kabupaten</th><th>Kecamatan</th><th>Jenjang</th><th>Progres validasi</th><th>Aksi</th></tr></thead><tbody id="tl"></tbody></table></div>
 <div class="foot"><button class="btn" id="toDash">Kembali ke dashboard</button> <button class="btn" id="home2">Halaman awal</button></div>
 </div></div>
-<dialog id="dlg"><h2>Panduan SPMI</h2><ol><li>Pengawas menambahkan sekolah binaannya lewat tombol Kelola akun.</li><li>Operator memilih sekolahnya di halaman Satuan Pendidikan lalu mendaftar. Pengawas menyetujui atau menolak.</li><li>Satu sekolah hanya bisa memiliki satu operator. Pengawas bisa menghapus akun operator agar sekolah bisa didaftar ulang.</li><li>Operator mengunggah dokumen (Excel, Word, PDF, foto/gambar, maksimal 10 MB), pengawas memverifikasi. Jika dokumen diganti, status kembali menunggu.</li></ol><button class="btn" onclick="this.parentNode.close()">Tutup</button></dialog>
+<dialog id="dlg"><h2>Panduan SPMI</h2><ol><li>Pengawas menambahkan sekolah binaannya lewat tombol Kelola akun.</li><li>Operator memilih sekolahnya di halaman Satuan Pendidikan lalu mendaftar. Pengawas menyetujui atau menolak.</li><li>Satu sekolah hanya bisa memiliki satu operator. Pengawas bisa menghapus akun operator agar sekolah bisa didaftar ulang.</li><li>Operator mengunggah dokumen (Excel, Word, PDF, foto/gambar, maksimal 10 MB), pengawas memverifikasi. Jika dokumen diganti, status kembali menunggu. Saat menandai Belum valid, pengawas menulis alasannya dan sekolah melihat catatan itu di kolom Validasi.</li></ol><button class="btn" onclick="this.parentNode.close()">Tutup</button></dialog>
 <dialog id="dop"><h2>Kelola sekolah dan operator</h2>
 <div id="tpbox" hidden><label class="note">Kelola binaan untuk:</label> <select id="tpw" style="padding:6px;margin:4px 0"></select></div>
 <h3>Sekolah binaan <small id="bcnt" class="note"></small></h3>
@@ -249,6 +251,11 @@ tr:target td,tr.flash td{background:var(--warn-bg)}
 <p><button class="btn go" id="lks" type="button">Simpan</button> <button class="btn" type="button" onclick="this.closest('dialog').close()">Batal</button></p></dialog>
 <dialog id="ded"><h2>Kelola daftar dokumen</h2><p class="note">Berlaku untuk semua sekolah binaan Anda. Kolom: Tahap, Aktivitas/dokumen yang diminta, Keterangan.</p>
 <div id="edl"></div><p style="margin-top:10px"><button class="btn" id="eadd">Tambah aktivitas</button> <button class="btn go" id="esave">Simpan</button> <button class="btn" onclick="this.closest('dialog').close()">Batal</button></p></dialog>
+<dialog id="dnote"><h2>Alasan belum valid</h2><p class="note" id="ntt"></p>
+<p class="note">Tulis bagian yang perlu diperbaiki, misalnya halaman, data, atau tanda tangan yang kurang. Catatan ini terlihat oleh sekolah.</p>
+<textarea id="ntx" rows="4" maxlength="300" placeholder="Contoh: Halaman 3 belum ditandatangani kepala sekolah." style="width:100%;padding:8px;margin:4px 0"></textarea>
+<p id="nsm" style="color:#d9364a;min-height:1.4em;margin:4px 0"></p>
+<button class="btn go" id="nsv" type="button">Simpan</button> <button class="btn" type="button" onclick="this.closest('dialog').close()">Batal</button></dialog>
 <div id="toast" role="status"></div>
 
 <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
@@ -290,7 +297,7 @@ var LIVE=false,ME={role:"demo",npsn:null,admin:false},BIN={},SUBS={},VER={},REG=
 var DEF=BASE.map(function(r,j){return {id:"a"+(j+1),tahap:r[0],akt:r[1],ket:""}});
 var MAX_SEKOLAH=15,ADM={},PREQ={},AUTOGO=false,WANT=null,ACTS={},PROF={},EDIT=null,AUTH=null,CFG=false,pendingW=null;
 function actList(p){var l=ACTS[p];return l&&l.length?l:DEF}
-function rows(l){return (l||DEF).map(function(r,j){return {no:j+1,id:r.id,tahap:r.tahap,akt:r.akt,ket:r.ket||"",tgl:"-",st:"menunggu",file:null}})}
+function rows(l){return (l||DEF).map(function(r,j){return {no:j+1,id:r.id,tahap:r.tahap,akt:r.akt,ket:r.ket||"",tgl:"-",st:"menunggu",note:"",file:null}})}
 function demo(){SCH=MASTER.map(function(s,i){var rs=rows();if(i===0)rs.forEach(function(r,j){r.tgl=BASE[j][2];r.file={n:"Dokumen arsip",at:r.tgl};r.st="valid"});return {npsn:s[0],nama:s[1],pw:null,rows:rs}});cur=SCH[0];D=cur.rows}
 function owners(){var o={};Object.keys(BIN).forEach(function(u){var sc=(BIN[u]||{}).schools||{};Object.keys(sc).forEach(function(n){var t=sc[n].ts||0;if(!o[n]||t<o[n].ts)o[n]={uid:u,ts:t,nama:sc[n].nama}})});
   if(OWNERUID)Object.keys(MAS).forEach(function(n){if(!o[n])o[n]={uid:OWNERUID,ts:0,nama:MAS[n],dflt:true}});return o}
@@ -300,7 +307,7 @@ function pemb(){return !LIVE||(ME.role==="pengawas"&&!!cur&&(ME.owner||cur.pw===
 function opCan(){return LIVE&&ME.role==="sekolah"&&!!cur&&ME.npsn===cur.npsn}
 function stamp(){var d=new Date(),p=function(n){return String(n).padStart(2,"0")};return p(d.getDate())+"-"+p(d.getMonth()+1)+"-"+d.getFullYear()+" "+p(d.getHours())+":"+p(d.getMinutes())}
 function docCell(r){if(!r.file)return "-";if(r.file.url)return '<a class="btn" href="'+esc(r.file.url)+'" target="_blank" rel="noopener noreferrer">Buka dokumen</a><br><small>'+esc(r.file.n)+'</small>';return '<button class="btn" data-doc="'+r.no+'">Lihat/Unduh</button>'}
-function actCell(r){var h="";if(opCan())h+='<button class="btn go" data-up="'+r.no+'">'+(r.file?"Ganti dokumen":"Unggah dokumen")+'</button>';if(pemb())h+='<div class="acts"><button class="btn'+(r.st==="valid"?" on":"")+'" data-set="valid" data-no="'+r.no+'">Valid</button><button class="btn'+(r.st==="belum"?" on":"")+'" data-set="belum" data-no="'+r.no+'">Belum valid</button><button class="btn" data-set="menunggu" data-no="'+r.no+'">Batal validasi</button></div>';return h}
+function actCell(r){var h="";if(opCan())h+='<button class="btn go" data-up="'+r.no+'">'+(r.file?"Ganti dokumen":"Unggah dokumen")+'</button>'+(r.file?' <button class="btn rm" data-del="'+r.no+'">Hapus dokumen</button>':'');if(pemb())h+='<div class="acts"><button class="btn'+(r.st==="valid"?" on":"")+'" data-set="valid" data-no="'+r.no+'">Valid</button><button class="btn'+(r.st==="belum"?" on":"")+'" data-set="belum" data-no="'+r.no+'">Belum valid</button><button class="btn" data-set="menunggu" data-no="'+r.no+'">Batal validasi</button></div>';return h}
 function pend(){var mm={};(ME.owner?SCH:mine()).forEach(function(s){mm[s.npsn]=1});return Object.keys(REG).filter(function(u){var g=REG[u],d=DEC[u];return mm[g.npsn]&&!APPR[g.npsn]&&!(d&&d.npsn===g.npsn&&d.ts>g.ts)}).map(function(u){return {uid:u,npsn:REG[u].npsn}})}
 function sync(){
   OWN=owners();
@@ -314,7 +321,7 @@ function sync(){
     var a=APPR[s.npsn],it=a?(SUBS[a.uid]||{}):{};
     Object.keys(it).forEach(function(k){var r=s.rows.filter(function(x){return x.id===k})[0];if(r){r.file=it[k];r.tgl=it[k].at}});
     ks.forEach(function(u){if(u!==s.pw&&u.indexOf("seed-")!==0)return;var v=(VER[u]||{})[s.npsn]||{};
-      s.rows.forEach(function(r){var x=v[r.id];if(r.file&&x&&x.at===r.file.at)r.st=x.s})});
+      s.rows.forEach(function(r){var x=v[r.id];if(r.file&&x&&x.at===r.file.at){r.st=x.s;r.note=x.s==="belum"?(x.n||""):""}})});
   });
   if(LIVE&&MR&&!AUTOGO){AUTOGO=true;var hh=location.hash.slice(1);
     if(WANT==="pengawas"&&ME.role!=="pengawas"){notPw()}
@@ -322,15 +329,26 @@ function sync(){
       location.hash=(ME.role==="pengawas"&&WANT!=="sekolah")?"daftar":ME.npsn?"sekolah-"+ME.npsn:"pilih"}}
   route();if($("dop").open)opList();
 }
-function set(no,st){
+function noteCell(r){if(!r.file||r.st!=="belum")return "";
+  if(r.note)return '<div class="nt"><b>Perbaiki:</b> '+esc(r.note)+'</div>';
+  return pemb()?'<div class="nt"><button class="btn" data-addnote="'+r.no+'">Tambah alasan</button></div>':'<div class="nt">Belum ada catatan dari pengawas.</div>'}
+var NOTENO=0;
+function askNote(no){var r=D[no-1];
+  if(!pemb()){toast("Hanya pengawas Pembina sekolah ini yang dapat memverifikasi");return}
+  if(!r.file){toast("Belum ada dokumen yang diunggah");return}
+  NOTENO=no;$("ntt").textContent="Aktivitas "+no+": "+r.akt;$("ntx").value=r.st==="belum"?(r.note||""):"";$("nsm").textContent="";$("dnote").showModal()}
+function saveNote(){var t=$("ntx").value.trim();
+  if(t.length<3){$("nsm").textContent="Tulis alasan agar sekolah tahu apa yang perlu diperbaiki.";return}
+  $("dnote").close();set(NOTENO,"belum",t)}
+function set(no,st,note){
   var r=D[no-1],msg="Aktivitas "+no+": "+(st==="menunggu"?"validasi dibatalkan":LBL[st]);
   if(LIVE){
     if(!pemb()){toast("Hanya pengawas Pembina sekolah ini yang dapat memverifikasi");return}
     if(!r.file){toast("Belum ada dokumen yang diunggah");return}
     var all=Object.assign({},VER[cur.pw]||{}),o=Object.assign({},all[cur.npsn]||{});
-    o[r.id]={s:st,at:r.file.at};all[cur.npsn]=o;
+    o[r.id]={s:st,at:r.file.at};if(st==="belum"&&note)o[r.id].n=note;all[cur.npsn]=o;
     DB.doc("verif/"+cur.pw).set({st:all}).then(function(){toast(msg)},fail);return}
-  r.st=st;toast(msg);render()}
+  r.st=st;r.note=st==="belum"?(note||""):"";toast(msg);render()}
 function summary(){
   var n=D.length,v=D.filter(function(r){return r.st==="valid"}).length,b=D.filter(function(r){return r.st==="belum"}).length,w=n-v-b;
   $("pct").textContent=Math.round(v/(n||1)*100)+"%";
@@ -359,7 +377,7 @@ function render(){
   $("tb").innerHTML=rows.map(function(r){
     return '<tr id="r'+r.no+'"><td class="num">'+r.no+'</td><td>'+esc(r.tahap)+'</td><td>'+esc(r.akt)+'</td>'+
     '<td>'+docCell(r)+'</td><td>'+esc(r.ket||"-")+'</td><td>'+r.tgl.replace(" ","&ensp;")+'</td>'+
-    '<td><span class="badge '+r.st+'">'+(!r.file?"Belum diunggah":LBL[r.st])+'</span></td>'+
+    '<td><span class="badge '+r.st+'">'+(!r.file?"Belum diunggah":LBL[r.st])+'</span>'+noteCell(r)+'</td>'+
     '<td>'+actCell(r)+'</td></tr>';
   }).join("");
   $("empty").hidden=rows.length>0;
@@ -502,6 +520,7 @@ document.addEventListener("click",function(e){
   if(d.login){goLogin(d.login)}
   else if(b.id.indexOf("home")===0)location.hash="masuk";
   else if(b.id==="pgo")pgo();
+  else if(d.del)delDoc(+d.del)
   else if(d.up){upNo=+d.up;upOpen()}
   else if(b.id==="lks")saveLink()
   else if(b.id==="tin")setMode("in")
@@ -534,7 +553,9 @@ document.addEventListener("click",function(e){
   else if(d.open)location.hash="sekolah-"+d.open;
   else if(b.id==="toDash"){var tl=mine(),tg=(cur&&tl.some(function(x){return x.npsn===cur.npsn}))?cur:tl[0];if(tg)location.hash="sekolah-"+tg.npsn;else toast("Belum ada sekolah binaan. Tambahkan lewat tombol Kelola akun.")}
   else if(b.id==="guide")$("dlg").showModal();
-  else if(d.set)set(+d.no,d.set);
+  else if(d.addnote)askNote(+d.addnote)
+  else if(d.set){if(d.set==="belum"&&LIVE)askNote(+d.no);else set(+d.no,d.set)}
+  else if(b.id==="nsv")saveNote()
   else if(d.doc)toast("Dokumen arsip awal belum punya file untuk dibuka");
   else if(b.id==="back")location.hash="daftar";
   else if(b.classList.contains("seg")){
@@ -598,6 +619,11 @@ function cldUp(f){return new Promise(function(res,rej){
   x.onload=function(){var j={};try{j=JSON.parse(x.responseText)}catch(e){}
     if(x.status>=200&&x.status<300&&j.secure_url)res(j.secure_url);else rej(new Error((j.error&&j.error.message)||("Kode "+x.status)))};
   x.onerror=function(){rej(new Error("Koneksi gagal"))};x.send(fd)})}
+async function delDoc(no){var row=D[no-1];if(!row||!row.file||!opCan())return;
+  var msg=row.st==="valid"?"Dokumen ini sudah dinyatakan valid. Menghapusnya akan menghilangkan status valid. Lanjutkan?":"Hapus dokumen untuk aktivitas ini? Anda dapat mengunggah lagi nanti.";
+  if(!confirm(msg))return;
+  var items=Object.assign({},SUBS[UID]||{});delete items[row.id];
+  try{await DB.doc("subs/"+UID).set({items:items,pw:cur.pw});toast("Dokumen dihapus")}catch(e){fail()}}
 async function saveLink(){if(UPBUSY)return;
   var f=$("lkf").files[0],u=$("lku").value.trim(),n=$("lkn").value.trim(),row=D[upNo-1],url,name;
   if(!row||!opCan())return;
