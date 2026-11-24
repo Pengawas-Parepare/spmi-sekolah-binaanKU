@@ -228,6 +228,7 @@ tr:target td,tr.flash td{background:var(--warn-bg)}
 <input type="file" id="fi" accept=".pdf,image/*" hidden>
 <dialog id="dauth"><h2 id="atl">Masuk</h2>
 <p style="margin:6px 0 10px"><button class="btn go" id="tin" type="button">Masuk</button> <button class="btn" id="tup" type="button">Daftar akun baru</button></p>
+<p id="anote" hidden style="margin:6px 0;padding:8px 12px;border-radius:8px;background:var(--warn-bg);color:var(--warn);font-size:.88rem">Akun pengawas baru perlu disetujui admin utama dulu. Setelah mendaftar, pengajuan Anda otomatis terkirim dan berstatus <b>Menunggu persetujuan admin</b>.</p>
 <input id="anm" placeholder="Nama lengkap" autocomplete="name" style="width:100%;padding:8px;margin:4px 0" hidden>
 <input id="aem" type="email" placeholder="Email" autocomplete="username" style="width:100%;padding:8px;margin:4px 0">
 <div style="position:relative"><input id="apw" type="password" placeholder="Kata sandi (minimal 6 karakter)" autocomplete="current-password" style="width:100%;padding:8px;margin:4px 0"><button class="btn" id="spw" type="button" style="position:absolute;right:4px;top:8px;padding:4px 8px">Lihat</button></div>
@@ -296,7 +297,7 @@ function toast(m){var t=$("toast");t.textContent=m;t.classList.add("show");clear
 function fail(){toast("Gagal menyimpan, coba lagi")}
 var LIVE=false,ME={role:"demo",npsn:null,admin:false},BIN={},SUBS={},VER={},REG={},APPR={},DEC={},LD={},OWN={},MR=false,UID=null,USER=null,DB=null,AS=null,upNo=0,SCH=[],cur=null,D=[];
 var DEF=BASE.map(function(r,j){return {id:"a"+(j+1),tahap:r[0],akt:r[1],ket:""}});
-var MAX_SEKOLAH=15,ADM={},PREQ={},AUTOGO=false,WANT=null,ACTS={},PROF={},EDIT=null,AUTH=null,CFG=false,pendingW=null;
+var MAX_SEKOLAH=15,ADM={},PREQ={},AUTOGO=false,WANT=null,ACTS={},PROF={},EDIT=null,AUTH=null,CFG=false,pendingW=null,AUTOREQ=false;
 function actList(p){var l=ACTS[p];return l&&l.length?l:DEF}
 function rows(l){return (l||DEF).map(function(r,j){return {no:j+1,id:r.id,tahap:r.tahap,akt:r.akt,ket:r.ket||"",tgl:"-",st:"menunggu",note:"",file:null}})}
 function demo(){SCH=MASTER.map(function(s,i){var rs=rows();if(i===0)rs.forEach(function(r,j){r.tgl=BASE[j][2];r.file={n:"Dokumen arsip",at:r.tgl};r.st="valid"});return {npsn:s[0],nama:s[1],pw:null,rows:rs}});cur=SCH[0];D=cur.rows}
@@ -495,9 +496,20 @@ async function masAdd(){var r=parseMas($("mta").value),n=Object.keys(r.o).length
   try{await DB.doc("master/sekolah").set({schools:Object.assign({},MAS,r.o),ownerUid:UID});$("mta").value="";toast(n+" sekolah ditambahkan/diperbarui"+(r.bad?", "+r.bad+" baris dilewati":""))}catch(e){fail()}}
 async function masDel(){var n=$("mdn").value.trim();if(!MAS[n]){toast("NPSN tidak ada di daftar");return}
   var o=Object.assign({},MAS);delete o[n];try{await DB.doc("master/sekolah").set({schools:o,ownerUid:UID});$("mdn").value="";toast("Dihapus dari daftar")}catch(e){fail()}}
-function notPw(){$("lmsg").textContent="Akun ini belum terdaftar sebagai pengawas. Anda bisa mengajukan agar disetujui admin utama.";$("reqp").hidden=false}
+async function notPw(){
+  var m=$("lmsg"),b=$("reqp"),u=AUTH&&AUTH.currentUser;m.style.color="#d9364a";
+  try{
+    var r=DB.doc("preq/"+UID),s=await r.get();
+    if(!s.exists&&AUTOREQ&&u){AUTOREQ=false;await r.set({name:u.displayName||u.email,email:u.email,ts:Date.now()});s=await r.get()}
+    if(s.exists){
+      m.style.color="#b7791f";b.hidden=true;
+      m.textContent="Menunggu persetujuan admin. Pengajuan pengawas Anda sudah terkirim. Halaman ini akan terbuka otomatis setelah disetujui.";
+      if(!window.AWATCH){window.AWATCH=1;DB.doc("admins/"+UID).onSnapshot(function(x){if(x.exists)location.reload()},function(){})}
+      return}
+  }catch(e){console.error(e)}
+  m.textContent="Akun ini belum terdaftar sebagai pengawas. Anda bisa mengajukan agar disetujui admin utama.";b.hidden=false}
 async function reqPw(){var u=AUTH.currentUser;if(!u)return;
-  try{await DB.doc("preq/"+UID).set({name:u.displayName||u.email,email:u.email,ts:Date.now()});$("lmsg").textContent="Pengajuan terkirim. Setelah disetujui admin utama, muat ulang halaman lalu klik Pengawas.";$("reqp").hidden=true}
+  try{await DB.doc("preq/"+UID).set({name:u.displayName||u.email,email:u.email,ts:Date.now()});notPw()}
   catch(e){console.error(e);$("lmsg").textContent=(e&&e.code==="permission-denied")?"Pengajuan ditolak server: aturan Firestore untuk koleksi preq belum mengizinkan akun ini menulis. Hubungi admin utama.":"Gagal mengirim pengajuan ("+((e&&e.code)||"coba lagi")+")."}}
 function ownList(){var ob=$("ownbox");ob.hidden=!ME.owner;$("tpbox").hidden=!ME.owner;if(!ME.owner)return;
   var cv=tp(),oh='<option value="'+UID+'">Saya (admin utama)</option>';Object.keys(ADM).forEach(function(u){if(u!==UID)oh+='<option value="'+esc(u)+'">'+esc(pwName(u))+'</option>'});$("tpw").innerHTML=oh;$("tpw").value=cv;
@@ -576,14 +588,14 @@ var AMODE="in";
 function setMode(m){AMODE=m;$("atl").textContent=m==="in"?"Masuk":"Buat akun baru";$("anm").hidden=$("apw2").hidden=m==="in";
   $("asub").textContent=m==="in"?"Masuk":"Buat akun";$("afor").hidden=m!=="in";$("amsg").textContent="";
   $("tin").className="btn"+(m==="in"?" go":"");$("tup").className="btn"+(m==="up"?" go":"");
-  $("apw").autocomplete=m==="in"?"current-password":"new-password"}
+  $("apw").autocomplete=m==="in"?"current-password":"new-password";$("anote").hidden=pendingW!=="pengawas"}
 function amsg(t,ok){var m=$("amsg");m.textContent=t;m.style.color=ok?"#1a7f4b":"#d9364a"}
 async function authSubmit(){var em=$("aem").value.trim(),pw=$("apw").value,nm=$("anm").value.trim(),bt=$("asub");amsg("");
   if(!/^\S+@\S+\.\S+$/.test(em)){amsg("Isi email dengan format yang benar.");return}
   if(pw.length<6){amsg("Kata sandi minimal 6 karakter.");return}
   if(AMODE==="up"){if(!nm){amsg("Isi nama lengkap.");return}if(pw!==$("apw2").value){amsg("Ulangi kata sandi tidak sama.");return}}
   bt.disabled=true;
-  try{if(AMODE==="up"){var c=await AUTH.createUserWithEmailAndPassword(em,pw);
+  try{if(AMODE==="up"){AUTOREQ=(pendingW==="pengawas");var c=await AUTH.createUserWithEmailAndPassword(em,pw);
       await c.user.updateProfile({displayName:nm});
       c.user.sendEmailVerification().catch(function(){});toast("Akun dibuat. Email verifikasi dikirim ke "+em)}
     else await AUTH.signInWithEmailAndPassword(em,pw);
