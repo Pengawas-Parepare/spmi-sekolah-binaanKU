@@ -162,7 +162,7 @@ tr:target td,tr.flash td{background:var(--warn-bg)}
 <div class="who" id="pnew" hidden style="margin-top:8px"><input id="pn" placeholder="NPSN" style="padding:10px;width:140px;border-radius:8px;border:1px solid var(--line)"><input id="pnm" placeholder="Nama sekolah" style="padding:10px;min-width:220px;border-radius:8px;border:1px solid var(--line)"></div>
 <div class="who" style="margin-top:8px"><button class="btn lg sk" id="pgo">Masuk</button></div><p id="pmsg" style="min-height:1.4em;margin:0 auto 12px;max-width:520px"></p><button class="btn" id="home3">Halaman awal</button></div></div></div>
 <div id="vDaftar" hidden><div class="wrap">
-<div class="top"><h1>Daftar sekolah binaan anda</h1><span><button class="btn" id="ops" hidden>Kelola akun</button> <button class="btn" id="guide">Panduan SPMI</button></span></div>
+<div class="top"><h1>Daftar sekolah binaan anda</h1><span><button class="btn" id="ops" hidden>Tambah sekolah binaan</button> <button class="btn" id="guide">Panduan SPMI</button></span></div>
 <p class="note">Status validasi di daftar ini sama dengan yang ada di laporan masing-masing sekolah.</p>
 <p id="pnote" hidden style="margin:0 0 12px;padding:8px 12px;border-radius:8px;background:var(--warn-bg);color:var(--warn);font-weight:500"></p>
 <div class="cg" id="cg"></div>
@@ -434,7 +434,7 @@ function charts(L){var el=$("cg");if(!L.length){el.innerHTML="";return}
 function listView(){var L=mine();charts(L);
   if(LIVE&&MR&&ME.role==="pengawas"&&!L.length&&!window.AUTOOP){window.AUTOOP=1;openOps()}
   $("tl").innerHTML=L.length?L.map(function(s,i){var v=s.rows.filter(function(r){return r.st==="valid"}).length;
-    return '<tr><td class="num">'+(i+1)+'</td><td>'+esc(s.npsn)+'</td><td>'+esc(s.nama)+ownTag(s)+'</td><td>Kota Parepare</td><td>Kec. Bacukiki Barat</td><td>SD</td><td><div class="mini"><div><i style="width:'+Math.round(v/(s.rows.length||1)*100)+'%"></i></div>'+v+'/'+s.rows.length+'</div></td><td><button class="btn go" data-open="'+esc(s.npsn)+'">Lihat laporan SPMI</button>'+(LIVE&&ME.role==="pengawas"&&(ME.owner||s.pw===UID)&&!(OWN[s.npsn]&&OWN[s.npsn].dflt)?' <button class="btn rm" data-bdel="'+esc(s.npsn)+'">Hapus</button>':'')+'</td></tr>'}).join(""):'<tr><td colspan="8" class="empty">Belum ada sekolah binaan. Tambahkan lewat tombol Kelola akun.</td></tr>';
+    return '<tr><td class="num">'+(i+1)+'</td><td>'+esc(s.npsn)+'</td><td>'+esc(s.nama)+ownTag(s)+'</td><td>Kota Parepare</td><td>Kec. Bacukiki Barat</td><td>SD</td><td><div class="mini"><div><i style="width:'+Math.round(v/(s.rows.length||1)*100)+'%"></i></div>'+v+'/'+s.rows.length+'</div></td><td><button class="btn go" data-open="'+esc(s.npsn)+'">Lihat laporan SPMI</button>'+(LIVE&&ME.role==="pengawas"&&(ME.owner||s.pw===UID)&&!(OWN[s.npsn]&&OWN[s.npsn].dflt)?' <button class="btn rm" data-bdel="'+esc(s.npsn)+'">Hapus</button>':'')+'</td></tr>'}).join(""):'<tr><td colspan="8" class="empty">Belum ada sekolah binaan.'+(LIVE&&ME.role==="pengawas"?' <button class="btn go" id="ops2">Tambah sekolah binaan</button>':' Tambahkan lewat tombol Kelola akun.')+'</td></tr>';
 }
 function route(e){
   var h=location.hash.slice(1)||"masuk",R=ME.role,m=/^sekolah-(\d+)$/.exec(h);
@@ -449,7 +449,7 @@ function route(e){
   if(m){cur=find(m[1]);D=cur.rows}
   $("vHome").hidden=h!=="masuk";$("vPick").hidden=h!=="pilih";$("vDaftar").hidden=h!=="daftar";$("vLap").hidden=!m;
   $("back").hidden=LIVE&&R==="sekolah";$("ops").hidden=!(LIVE&&R==="pengawas");
-  if(LIVE&&R==="pengawas"){var n=pend().length+(ME.owner?Object.keys(PREQ).filter(function(u){return !ADM[u]}).length:0);$("ops").textContent="Kelola sekolah dan operator"+(n?" ("+n+")":"");var pp=ME.owner?Object.keys(PREQ).filter(function(u){return !ADM[u]}).length:0;$("pnote").hidden=!pp;if(pp)$("pnote").textContent="Ada "+pp+" pengajuan pengawas baru menunggu persetujuan Anda. Buka Kelola sekolah dan operator, bagian Permintaan pengawas."}
+  if(LIVE&&R==="pengawas"){var n=pend().length+(ME.owner?Object.keys(PREQ).filter(function(u){return !ADM[u]}).length:0);$("ops").textContent="Tambah sekolah binaan dan kelola operator"+(n?" ("+n+")":"");var pp=ME.owner?Object.keys(PREQ).filter(function(u){return !ADM[u]}).length:0;$("pnote").hidden=!pp;if(pp)$("pnote").textContent="Ada "+pp+" pengajuan pengawas baru menunggu persetujuan Anda. Buka Kelola sekolah dan operator, bagian Permintaan pengawas."}
   $("role").textContent=!LIVE?"Mode demo: belum terhubung ke akun, perubahan tidak tersimpan.":RL[R]?"Masuk sebagai "+RL[R]:"";
   if(h==="pilih")fillPick();
   if(h==="daftar")listView();else if(m){$("chip").textContent=cur.nama+", NPSN "+cur.npsn;render()}
@@ -625,7 +625,7 @@ document.addEventListener("click",function(e){
   else if(d.pdel){if(confirm("Cabut hak pengawas akun ini? Sekolah binaannya tetap tersimpan."))DB.doc("admins/"+d.pdel).delete().then(function(){DB.doc("pubpw/"+d.pdel).delete().catch(function(){});toast("Hak pengawas dicabut")},fail)}
   else if(b.id==="reqp")reqPw()
   else if(b.id==="bcus"){var n=$("bn").value.trim(),nm=$("bnm").value.trim();if(!/^\d{5,10}$/.test(n)||!nm){toast("Isi NPSN (angka) dan nama sekolah");return}if(addSchool(n,nm.toUpperCase())){masAddOne(n,nm.toUpperCase());SEL.add(n);chkRender()}$("bn").value="";$("bnm").value=""}
-  else if(b.id==="ops")openOps()
+  else if(b.id==="ops"||b.id==="ops2")openOps()
   else if(b.id==="bsave")saveSel()
   else if(b.id==="madd")masAdd()
   else if(b.id==="mdel")masDel()
