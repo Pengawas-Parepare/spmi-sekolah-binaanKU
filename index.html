@@ -33,6 +33,11 @@ a.btn{text-decoration:none;display:inline-block}
 dialog{max-width:420px;border:1px solid var(--line);border-radius:10px;background:var(--surface);color:var(--ink);padding:20px}
 dialog h2{margin:0 0 8px;font-size:1.1rem}
 .rowx{margin:6px 0}
+#dop{max-width:560px;width:calc(100% - 24px)}
+.brow{display:flex;gap:10px;align-items:center;justify-content:space-between;padding:8px 4px;border-bottom:1px solid var(--line)}.brow:last-child{border-bottom:0}
+.brow .tx{flex:1;min-width:0}.brow small{display:block;color:var(--muted);font-size:.78rem;margin-top:2px}
+.btabs{display:flex;gap:6px;flex-wrap:wrap;margin:10px 0 8px}.btabs .btn.on{background:var(--brand);color:var(--brand-ink)}
+.bstat{display:flex;gap:8px;flex-wrap:wrap;margin:8px 0}.bstat span{background:var(--bg);border:1px solid var(--line);border-radius:99px;padding:2px 10px;font-size:.78rem;color:var(--muted)}
 dialog h3{margin:14px 0 6px;font-size:.95rem}
 dialog ol{padding-left:20px;margin:0 0 14px}
 html{color-scheme:light dark}
@@ -170,12 +175,13 @@ tr:target td,tr.flash td{background:var(--warn-bg)}
 <div class="foot"><button class="btn" id="toDash">Kembali ke dashboard</button> <button class="btn" id="home2">Halaman awal</button></div>
 </div></div>
 <dialog id="dlg"><h2>Panduan SPMI</h2><ol><li>Pengawas menambahkan sekolah binaannya lewat tombol Kelola akun.</li><li>Operator memilih sekolahnya di halaman Satuan Pendidikan lalu mendaftar. Pengawas menyetujui atau menolak.</li><li>Satu sekolah hanya bisa memiliki satu operator. Pengawas bisa menghapus akun operator agar sekolah bisa didaftar ulang.</li><li>Operator mengunggah dokumen (Excel, Word, PDF, foto/gambar, maksimal 10 MB), pengawas memverifikasi. Jika dokumen diganti, status kembali menunggu. Saat menandai Belum valid, pengawas menulis alasannya dan sekolah melihat catatan itu di kolom Validasi.</li></ol><button class="btn" onclick="this.parentNode.close()">Tutup</button></dialog>
-<dialog id="dop"><h2>Kelola sekolah dan operator</h2>
-<div id="tpbox" hidden><label class="note">Kelola binaan untuk:</label> <select id="tpw" style="padding:6px;margin:4px 0"></select></div>
-<h3>Sekolah binaan <small id="bcnt" class="note"></small></h3>
+<dialog id="dop"><h2>Kelola sekolah binaan</h2>
+<div id="tpbox" hidden><label class="note">Pengawas yang dikelola:</label> <select id="tpw" style="padding:6px;margin:4px 0;max-width:100%"></select></div>
+<div id="bstat" class="bstat"></div>
+<div id="btabs" class="btabs"></div>
 <input id="bq" placeholder="Cari nama atau NPSN" style="width:100%;padding:8px;margin:4px 0">
-<div id="bchk" style="max-height:260px;overflow:auto;border:1px solid var(--line);border-radius:8px;padding:6px"></div>
-<p style="margin:8px 0"><button class="btn go" id="bsave">Simpan pilihan</button></p>
+<div id="bchk" style="max-height:280px;overflow:auto;border:1px solid var(--line);border-radius:8px;padding:2px 8px"></div>
+<p id="bsrow" style="margin:8px 0" hidden><button class="btn go" id="bsave">Simpan pilihan</button></p>
 <details style="margin:6px 0"><summary>Sekolah tidak ada di daftar? Tambah manual</summary>
 <div style="display:flex;gap:6px;margin:8px 0"><input id="bn" placeholder="NPSN" style="width:110px;padding:8px"><input id="bnm" placeholder="Nama sekolah" style="flex:1;padding:8px"><button class="btn" id="bcus">Tambah</button></div></details>
 <h3>Permintaan operator</h3><div id="rq"></div>
@@ -302,7 +308,7 @@ function toast(m){var t=$("toast");t.textContent=m;t.classList.add("show");clear
 function fail(){toast("Gagal menyimpan, coba lagi")}
 var LIVE=false,ME={role:"demo",npsn:null,admin:false},BIN={},SUBS={},VER={},REG={},APPR={},DEC={},LD={},OWN={},MR=false,UID=null,USER=null,DB=null,AS=null,upNo=0,SCH=[],cur=null,D=[];
 var DEF=BASE.map(function(r,j){return {id:"a"+(j+1),tahap:r[0],akt:r[1],ket:""}});
-var MAX_SEKOLAH=15,ADM={},PUB={},PREQ={},AUTOGO=false,WANT=null,ACTS={},PROF={},EDIT=null,AUTH=null,CFG=false,pendingW=null,AUTOREQ=false;
+var ADM={},PUB={},PREQ={},AUTOGO=false,WANT=null,ACTS={},PROF={},EDIT=null,AUTH=null,CFG=false,pendingW=null,AUTOREQ=false;
 function actList(p){var l=ACTS[p];return l&&l.length?l:DEF}
 function rows(l){return (l||DEF).map(function(r,j){return {no:j+1,id:r.id,tahap:r.tahap,akt:r.akt,ket:r.ket||"",tgl:"-",st:"menunggu",note:"",file:null}})}
 function demo(){SCH=MASTER.map(function(s,i){var rs=rows();if(i===0)rs.forEach(function(r,j){r.tgl=BASE[j][2];r.file={n:"Dokumen arsip",at:r.tgl};r.st="valid"});return {npsn:s[0],nama:s[1],pw:null,rows:rs}});cur=SCH[0];D=cur.rows}
@@ -491,7 +497,7 @@ async function addApprove(u,n){
   if(APPR[n]){toast("Sekolah ini sudah memiliki operator yang disetujui");return}
   if(OWN[n]&&OWN[n].uid!==pw&&!OWN[n].dflt){toast("Sekolah ini sudah menjadi binaan pengawas lain");return}
   try{var cur=((BIN[pw]||{}).schools)||{};
-    if(!cur[n]){if(Object.keys(cur).length>=MAX_SEKOLAH){toast("Maksimal "+MAX_SEKOLAH+" sekolah binaan");return}
+    if(!cur[n]){
       var sc=Object.assign({},cur);sc[n]={nama:nama,ts:Date.now()};await DB.doc("binaan/"+pw).set(bdoc(pw,sc));masAddOne(n,nama)}
     await DB.doc("appr/"+n).set({uid:u,ts:Date.now(),pw:pw});toast("Sekolah ditambahkan dan operator disetujui")}
   catch(e){console.error(e);fail()}}
@@ -510,7 +516,6 @@ async function pgo(){
 function approve(u,n){if(APPR[n]){toast("Sekolah ini sudah memiliki operator yang disetujui");return}
   DB.doc("appr/"+n).set({uid:u,ts:Date.now(),pw:(OWN[n]||{uid:UID}).uid}).then(function(){toast("Operator disetujui")},fail)}
 function addSchool(n,nama){if(!n){toast("Pilih sekolah dulu");return}
-  if(Object.keys((BIN[tp()]||{}).schools||{}).length>=MAX_SEKOLAH){toast("Satu pengawas maksimal "+MAX_SEKOLAH+" sekolah binaan");return}
   if(OWN[n]){toast(OWN[n].uid===tp()?"Sekolah sudah ada di daftar binaan Anda":"Sekolah ini sudah menjadi binaan pengawas lain");return}
   var sc=Object.assign({},(BIN[tp()]||{}).schools||{});sc[n]={nama:nama,ts:Date.now()};
   DB.doc("binaan/"+tp()).set(bdoc(tp(),sc)).then(function(){toast("Sekolah ditambahkan")},fail);return true}
@@ -524,31 +529,49 @@ function delSchool(n,pwx){var o=OWN[n],pw=pwx||(o&&o.uid)||tp();
 
 var TP=null,OWNERUID=null,MAS={},SEL=new Set();MASTER.forEach(function(x){MAS[x[0]]=x[1]});
 function tp(){return TP||UID}
-function selReset(){SEL=new Set(Object.keys((BIN[tp()]||{}).schools||{}));$("bq").value=""}
-function selCount(){$("bcnt").textContent="(dipilih "+SEL.size+" dari "+MAX_SEKOLAH+")"}
+var BTAB="own";
+function selReset(){SEL=new Set();$("bq").value="";BTAB=Object.keys((BIN[tp()]||{}).schools||{}).length?"own":"add"}
+function selCount(){}
 function chkRender(){
-  var own=(BIN[tp()]||{}).schools||{},q=$("bq").value.trim().toLowerCase(),L={};
-  Object.keys(MAS).forEach(function(n){L[n]=MAS[n]});Object.keys(own).forEach(function(n){if(!L[n])L[n]=own[n].nama});
-  var arr=Object.keys(L).map(function(n){return [n,L[n]]}).filter(function(a){return !own[a[0]]}).filter(function(a){var o=OWN[a[0]];return ME.owner||!(o&&o.uid!==tp()&&!o.dflt)}).filter(function(a){return !q||a[0].indexOf(q)>=0||String(a[1]).toLowerCase().indexOf(q)>=0}).sort(function(a,b){return String(a[1]).localeCompare(String(b[1]))});
-  $("bchk").innerHTML=arr.length?arr.map(function(a){var n=a[0],o=OWN[n],other=!!(o&&o.uid!==tp()&&!o.dflt);
-    return '<div style="display:flex;gap:8px;align-items:center;justify-content:space-between;padding:4px 2px"><label style="display:flex;gap:8px;align-items:center;flex:1;'+(other?'opacity:.55':'')+'"><input type="checkbox" data-bc="'+esc(n)+'"'+(SEL.has(n)?' checked':'')+(other?' disabled':'')+'><span>'+esc(a[1])+' <small class="note">'+esc(n)+(other?' · binaan pengawas lain':'')+'</small></span></label>'+(SEL.has(n)&&!other?'<button type="button" class="btn rm" data-bdel="'+esc(n)+'" data-bpw="'+esc(tp())+'">Hapus</button>':'')+'</div>'}).join(""):"Tidak ada sekolah yang cocok atau semua sudah tersimpan.";
-  selCount()}
+  var pw=tp(),bs=(BIN[pw]||{}).schools||{},q=$("bq").value.trim().toLowerCase(),L={};
+  Object.keys(MAS).forEach(function(n){L[n]=MAS[n]});Object.keys(bs).forEach(function(n){L[n]=bs[n].nama||L[n]||("Sekolah "+n)});
+  var nm=function(n){return String(L[n]||bs[n]&&bs[n].nama||n)},
+      oth=function(n){var o=OWN[n];return !!(o&&o.uid!==pw&&!o.dflt)},
+      hit=function(n){return !q||n.indexOf(q)>=0||nm(n).toLowerCase().indexOf(q)>=0},
+      srt=function(a,b){return nm(a).localeCompare(nm(b))},
+      all=Object.keys(L),
+      lOwn=Object.keys(bs),
+      lAdd=all.filter(function(n){return !bs[n]&&!oth(n)}),
+      lOth=ME.owner?all.filter(function(n){return !bs[n]&&oth(n)}):[];
+  if(!ME.owner&&BTAB==="oth")BTAB="own";
+  var tot=lOwn.length+SEL.size;
+  $("bstat").innerHTML='<span>Binaan tersimpan: <b>'+lOwn.length+'</b> sekolah</span><span>Tersedia: <b>'+lAdd.length+'</b></span>'+(ME.owner?'<span>Dibina pengawas lain: <b>'+lOth.length+'</b></span>':'');
+  var tb=function(k,t){return '<button type="button" class="btn'+(BTAB===k?' on':'')+'" data-btab="'+k+'">'+t+'</button>'};
+  $("btabs").innerHTML=tb("own","Binaan ("+lOwn.length+")")+tb("add","Tambah sekolah ("+lAdd.length+")")+(ME.owner?tb("oth","Dibina pengawas lain ("+lOth.length+")"):"");
+  var row=function(n,sub,right,left){return '<div class="brow">'+(left||"")+'<span class="tx">'+esc(nm(n))+'<small>'+esc(n)+(sub?' · '+sub:'')+'</small></span>'+(right||"")+'</div>'};
+  var h="";
+  if(BTAB==="own"){var a=lOwn.filter(hit).sort(srt);
+    h=a.length?a.map(function(n){return row(n,APPR[n]?"operator sudah terhubung":"belum ada operator",'<button type="button" class="btn rm" data-bdel="'+esc(n)+'" data-bpw="'+esc(pw)+'">Hapus</button>')}).join(""):(lOwn.length?"Tidak ada yang cocok dengan pencarian.":"Belum ada sekolah binaan. Buka tab Tambah sekolah untuk memilih.")}
+  else if(BTAB==="add"){var a2=lAdd.filter(hit).sort(srt);
+    h=a2.length?a2.map(function(n){var on=SEL.has(n);return row(n,"",on?'<button type="button" class="btn rm" data-bdel="'+esc(n)+'" data-bpw="'+esc(pw)+'">Hapus</button>':"",'<input type="checkbox" data-bc="'+esc(n)+'"'+(on?' checked':'')+'>')}).join(""):(lAdd.length?"Tidak ada yang cocok dengan pencarian.":"Semua sekolah sudah menjadi binaan.")}
+  else{var a3=lOth.filter(hit).sort(srt);
+    h=a3.length?a3.map(function(n){var u=OWN[n].uid;return row(n,"dibina oleh "+esc(pwName(u)),'<button type="button" class="btn rm" data-bdel="'+esc(n)+'" data-bpw="'+esc(u)+'">Hapus</button>')}).join(""):"Tidak ada sekolah yang dibina pengawas lain."}
+  $("bchk").innerHTML=h;
+  $("bsrow").hidden=BTAB!=="add";$("bsave").textContent=SEL.size?"Simpan "+SEL.size+" sekolah terpilih":"Simpan pilihan";$("bsave").disabled=!SEL.size}
 function openOps(){TP=UID;selReset();chkRender();$("dop").showModal();opList()}
 $("bq").addEventListener("input",chkRender);
 $("tpw").addEventListener("change",function(){TP=this.value;selReset();chkRender()});
 $("bchk").addEventListener("change",function(e){var t=e.target;if(!t.dataset||!t.dataset.bc)return;
-  if(t.checked){if(SEL.size>=MAX_SEKOLAH){t.checked=false;toast("Maksimal "+MAX_SEKOLAH+" sekolah binaan");return}SEL.add(t.dataset.bc)}else SEL.delete(t.dataset.bc);chkRender()});
+  var saved=Object.keys((BIN[tp()]||{}).schools||{}).length;
+  if(t.checked){SEL.add(t.dataset.bc)}else SEL.delete(t.dataset.bc);chkRender()});
 async function saveSel(){
-  var cur=(BIN[tp()]||{}).schools||{},ns={},removed=[];
-  if(SEL.size>MAX_SEKOLAH){toast("Maksimal "+MAX_SEKOLAH+" sekolah binaan");return}
-  SEL.forEach(function(n){ns[n]=cur[n]||{nama:MAS[n]||"Sekolah "+n,ts:Date.now()}});
-  Object.keys(cur).forEach(function(n){if(!SEL.has(n))removed.push(n)});
-  var fresh=Object.keys(ns).filter(function(n){return !cur[n]}),blocked=[];
-  for(var i=0;i<fresh.length;i++){try{var ax=await DB.doc("appr/"+fresh[i]).get();if(ax.exists&&(ax.data()||{}).pw!==tp())blocked.push(ns[fresh[i]].nama)}catch(e){}}
+  var pw=tp(),cur=(BIN[pw]||{}).schools||{},ns=Object.assign({},cur),fresh=[];
+  SEL.forEach(function(n){if(!cur[n]){ns[n]={nama:MAS[n]||"Sekolah "+n,ts:Date.now()};fresh.push(n)}});
+  if(!fresh.length){toast("Centang sekolah yang ingin ditambahkan dulu");return}
+  var blocked=[];
+  for(var i=0;i<fresh.length;i++){try{var ax=await DB.doc("appr/"+fresh[i]).get();if(ax.exists&&(ax.data()||{}).pw!==pw)blocked.push(ns[fresh[i]].nama)}catch(e){}}
   if(blocked.length){toast("Sudah punya operator yang disetujui admin/pengawas lain: "+blocked.join(", ")+". Hubungi admin utama.");return}
-  var linked=removed.filter(function(n){return APPR[n]});
-  if(linked.length&&!confirm("Melepas "+linked.length+" sekolah yang sudah punya operator akan memutus akun operatornya. Lanjutkan?"))return;
-  try{await DB.doc("binaan/"+tp()).set(bdoc(tp(),ns));linked.forEach(function(n){DB.doc("appr/"+n).delete()});BIN[tp()]=Object.assign({},BIN[tp()]||{},bdoc(tp(),ns));$("bq").value="";chkRender();toast("Pilihan sekolah binaan disimpan")}catch(e){fail()}}
+  try{await DB.doc("binaan/"+pw).set(bdoc(pw,ns));BIN[pw]=Object.assign({},BIN[pw]||{},bdoc(pw,ns));SEL=new Set();$("bq").value="";BTAB="own";chkRender();toast(fresh.length+" sekolah ditambahkan ke binaan")}catch(e){fail()}}
 function parseMas(t){var o={},bad=0;t.split(/\r?\n/).forEach(function(l){l=l.trim();if(!l)return;var m=/^(\d{5,10})\s*[;,\t]\s*(.+)$/.exec(l);if(m)o[m[1]]=m[2].trim().toUpperCase();else bad++});return {o:o,bad:bad}}
 function masAddOne(n,nama){if(MAS[n])return;var f={};f["schools."+n]=nama;DB.doc("master/sekolah").update(f).catch(function(e){console.error(e)})}
 async function masAdd(){var r=parseMas($("mta").value),n=Object.keys(r.o).length;
@@ -619,6 +642,7 @@ document.addEventListener("click",function(e){
   else if(d.ok)approve(d.ok,d.sc);
   else if(d.rej)DB.doc("dec/"+d.rej).set({npsn:d.sc,ts:Date.now(),pw:(OWN[d.sc]||{uid:UID}).uid}).then(function(){toast("Permintaan ditolak")},fail);
   else if(d.adel)DB.doc("appr/"+d.adel).delete().then(function(){toast("Akun operator dihapus. Sekolah bisa didaftar ulang.")},fail);
+  else if(d.btab){BTAB=d.btab;chkRender()}
   else if(d.bdel){if(d.bpw&&!(((BIN[d.bpw]||{}).schools||{})[d.bdel])){SEL.delete(d.bdel);chkRender()}else delSchool(d.bdel,d.bpw)}
   else if(d.pok)pwOk(d.pok)
   else if(d.prej)DB.doc("preq/"+d.prej).delete().then(function(){toast("Permintaan ditolak")},fail)
@@ -747,7 +771,7 @@ async function startLive(u){
     var idf=function(x){return x};
     var qs=function(n,q,get,put){q.onSnapshot(function(c){var o={};c.docs.forEach(function(x){o[x.id]=get(x.data()||{})});put(o);ready(n)},er)};
     var ds=function(n,r,get,put){r.onSnapshot(function(x){put(x.exists?get(x.data()||{}):null);ready(n)},er)};
-    qs("binaan",DB.collection("binaan"),idf,function(o){BIN=o;syncNames()});
+    qs("binaan",DB.collection("binaan"),idf,function(o){BIN=o;syncNames();if($("dop").open)chkRender()});
     qs("acts",DB.collection("acts"),function(x){return x.list||[]},function(o){ACTS=o});
     if(ME.admin){
       if(ME.owner)qs("verif",DB.collection("verif"),function(x){return x.st||{}},function(o){VER=o});
