@@ -540,7 +540,7 @@ async function saveSel(){
   if(blocked.length){toast("Sudah punya operator yang disetujui admin/pengawas lain: "+blocked.join(", ")+". Hubungi admin utama.");return}
   var linked=removed.filter(function(n){return APPR[n]});
   if(linked.length&&!confirm("Melepas "+linked.length+" sekolah yang sudah punya operator akan memutus akun operatornya. Lanjutkan?"))return;
-  try{await DB.doc("binaan/"+tp()).set({schools:ns});linked.forEach(function(n){DB.doc("appr/"+n).delete()});toast("Pilihan sekolah binaan disimpan")}catch(e){fail()}}
+  try{await DB.doc("binaan/"+tp()).set({schools:ns});linked.forEach(function(n){DB.doc("appr/"+n).delete()});BIN[tp()]=Object.assign({},BIN[tp()]||{},{schools:ns});$("bq").value="";chkRender();toast("Pilihan sekolah binaan disimpan")}catch(e){fail()}}
 function parseMas(t){var o={},bad=0;t.split(/\r?\n/).forEach(function(l){l=l.trim();if(!l)return;var m=/^(\d{5,10})\s*[;,\t]\s*(.+)$/.exec(l);if(m)o[m[1]]=m[2].trim().toUpperCase();else bad++});return {o:o,bad:bad}}
 function masAddOne(n,nama){if(MAS[n])return;var f={};f["schools."+n]=nama;DB.doc("master/sekolah").update(f).catch(function(e){console.error(e)})}
 async function masAdd(){var r=parseMas($("mta").value),n=Object.keys(r.o).length;
