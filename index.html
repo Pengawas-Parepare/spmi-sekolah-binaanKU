@@ -755,9 +755,10 @@ async function startLive(u){
       if(ME.owner&&OWNERUID!==UID&&!window.ENS){window.ENS=1;DB.doc("master/sekolah").set({schools:MAS,ownerUid:UID}).catch(function(){})}
       if(MR)sync();if($("dop").open){chkRender();ownList()}},er);
     if(ME.owner){
-      DB.collection("admins").onSnapshot(function(c){var o={};c.docs.forEach(function(x){o[x.id]=x.data()});ADM=o;Object.keys(o).forEach(function(k){var nm=o[k].name||o[k].email||"Pengawas";if(!PUB[k]||PUB[k].name!==nm)DB.doc("pubpw/"+k).set({name:nm}).catch(function(){})});if(MR)sync()},er);
+      DB.collection("admins").onSnapshot(function(c){var o={};c.docs.forEach(function(x){o[x.id]=x.data()});ADM=o;Object.keys(o).forEach(function(k){var nm=o[k].name||o[k].email||"Pengawas";if(!PUB[k]||PUB[k].name!==nm)DB.doc("pubpw/"+k).set({name:nm}).catch(function(e){console.error(e);if(!window.PWARN){window.PWARN=1;toast("Nama pengawas belum bisa disimpan untuk operator. Tambahkan aturan pubpw di Firestore lalu muat ulang.")}})});if(MR)sync()},er);
       DB.collection("preq").onSnapshot(function(c){var o={};c.docs.forEach(function(x){o[x.id]=x.data()});PREQ=o;if(MR)sync()},function(e){console.error(e);toast("Permintaan pengawas tidak bisa dibaca"+((e&&e.code==="permission-denied")?": aturan Firestore koleksi preq belum mengizinkan admin utama membaca":""))});
     }
+    if(ME.admin)DB.doc("pubpw/"+UID).set({name:u.displayName||u.email||"Pengawas"}).catch(function(e){console.error(e);if(!window.PWARN){window.PWARN=1;toast("Nama pengawas belum bisa disimpan untuk operator. Tambahkan aturan pubpw di Firestore lalu muat ulang.")}});
     DB.collection("pubpw").onSnapshot(function(c){var o={};c.docs.forEach(function(x){o[x.id]=x.data()});PUB=o;if(MR)sync()},function(e){console.error(e)});
     $("out").hidden=false;$("out").textContent="Akun saya ("+u.email+")";
     sync();
