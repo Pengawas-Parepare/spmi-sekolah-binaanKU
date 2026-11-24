@@ -310,8 +310,8 @@ function owners(){var o={};Object.keys(BIN).forEach(function(u){var sc=(BIN[u]||
   if(OWNERUID)Object.keys(MAS).forEach(function(n){if(!o[n])o[n]={uid:OWNERUID,ts:0,nama:MAS[n],dflt:true}});return o}
 function ownTag(s){if(!LIVE||!ME.owner)return "";var o=OWN[s.npsn]||{},b="display:inline-block;margin-left:6px;padding:1px 9px;border-radius:99px;font-size:.75rem;font-weight:600;";
   if(o.dflt)return '<span style="'+b+'background:var(--wait-bg);color:var(--wait)">Belum ada pengawas</span>';
-  if(s.pw===UID)return '<span style="'+b+'background:var(--ok-bg);color:var(--ok)">Binaan admin</span>';
-  return '<span style="'+b+'background:var(--warn-bg);color:var(--warn)">Binaan: '+esc(pwName(s.pw))+'</span>'}
+  if(s.pw===UID)return '<span style="'+b+'background:var(--ok-bg);color:var(--ok)">Sekolah binaan admin</span>';
+  return '<span style="'+b+'background:var(--warn-bg);color:var(--warn)">Sekolah binaan: '+esc(pwName(s.pw))+'</span>'}
 function mine(){return SCH.filter(function(s){return !LIVE||ME.owner||s.pw===UID})}
 function pwName(u){var a=ADM[u]||{};return a.name||a.email||"Pengawas lain"}
 function pemb(){return !LIVE||(ME.role==="pengawas"&&!!cur&&(ME.owner||cur.pw===UID))}
