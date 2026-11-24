@@ -521,7 +521,7 @@ function selCount(){$("bcnt").textContent="(dipilih "+SEL.size+" dari "+MAX_SEKO
 function chkRender(){
   var own=(BIN[tp()]||{}).schools||{},q=$("bq").value.trim().toLowerCase(),L={};
   Object.keys(MAS).forEach(function(n){L[n]=MAS[n]});Object.keys(own).forEach(function(n){if(!L[n])L[n]=own[n].nama});
-  var arr=Object.keys(L).map(function(n){return [n,L[n]]}).filter(function(a){return !own[a[0]]}).filter(function(a){return !q||a[0].indexOf(q)>=0||String(a[1]).toLowerCase().indexOf(q)>=0}).sort(function(a,b){return String(a[1]).localeCompare(String(b[1]))});
+  var arr=Object.keys(L).map(function(n){return [n,L[n]]}).filter(function(a){return !own[a[0]]}).filter(function(a){var o=OWN[a[0]];return ME.owner||!(o&&o.uid!==tp()&&!o.dflt)}).filter(function(a){return !q||a[0].indexOf(q)>=0||String(a[1]).toLowerCase().indexOf(q)>=0}).sort(function(a,b){return String(a[1]).localeCompare(String(b[1]))});
   $("bchk").innerHTML=arr.length?arr.map(function(a){var n=a[0],o=OWN[n],other=!!(o&&o.uid!==tp()&&!o.dflt);
     return '<div style="display:flex;gap:8px;align-items:center;justify-content:space-between;padding:4px 2px"><label style="display:flex;gap:8px;align-items:center;flex:1;'+(other?'opacity:.55':'')+'"><input type="checkbox" data-bc="'+esc(n)+'"'+(SEL.has(n)?' checked':'')+(other?' disabled':'')+'><span>'+esc(a[1])+' <small class="note">'+esc(n)+(other?' · binaan pengawas lain':'')+'</small></span></label>'+(SEL.has(n)&&!other?'<button type="button" class="btn rm" data-bdel="'+esc(n)+'" data-bpw="'+esc(tp())+'">Hapus</button>':'')+'</div>'}).join(""):"Tidak ada sekolah yang cocok atau semua sudah tersimpan.";
   selCount()}
