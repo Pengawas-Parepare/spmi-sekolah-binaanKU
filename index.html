@@ -308,7 +308,7 @@ function rows(l){return (l||DEF).map(function(r,j){return {no:j+1,id:r.id,tahap:
 function demo(){SCH=MASTER.map(function(s,i){var rs=rows();if(i===0)rs.forEach(function(r,j){r.tgl=BASE[j][2];r.file={n:"Dokumen arsip",at:r.tgl};r.st="valid"});return {npsn:s[0],nama:s[1],pw:null,rows:rs}});cur=SCH[0];D=cur.rows}
 function owners(){var o={};Object.keys(BIN).forEach(function(u){var sc=(BIN[u]||{}).schools||{};Object.keys(sc).forEach(function(n){var t=sc[n].ts||0;if(!o[n]||t<o[n].ts)o[n]={uid:u,ts:t,nama:sc[n].nama}})});
   if(OWNERUID)Object.keys(MAS).forEach(function(n){if(!o[n])o[n]={uid:OWNERUID,ts:0,nama:MAS[n],dflt:true}});return o}
-function mine(){return SCH.filter(function(s){return !LIVE||ME.owner||s.pw===UID})}
+function mine(){return SCH.filter(function(s){var o=OWN[s.npsn];return !LIVE||(!(o&&o.dflt)&&(ME.owner||s.pw===UID))})}
 function pwName(u){var a=ADM[u]||{};return a.name||a.email||"Pengawas lain"}
 function pemb(){return !LIVE||(ME.role==="pengawas"&&!!cur&&(ME.owner||cur.pw===UID))}
 function opCan(){return LIVE&&ME.role==="sekolah"&&!!cur&&ME.npsn===cur.npsn}
