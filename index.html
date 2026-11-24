@@ -313,6 +313,10 @@ function ownTag(s){if(!LIVE||!ME.owner)return "";var o=OWN[s.npsn]||{},b="displa
   if(s.pw===UID)return '<span style="'+b+'background:var(--ok-bg);color:var(--ok)">Sekolah binaan admin</span>';
   return '<span style="'+b+'background:var(--warn-bg);color:var(--warn)">Sekolah binaan: '+esc(pwName(s.pw))+'</span>'}
 function mine(){return SCH.filter(function(s){return !LIVE||ME.owner||s.pw===UID})}
+function bname(u){var a=ADM[u]||{},c=AUTH&&AUTH.currentUser;return (u===UID&&c&&(c.displayName||c.email))||a.name||a.email||(PUB[u]||{}).name||(BIN[u]||{}).name||""}
+function bdoc(pw,sc){var o={schools:sc},n=bname(pw);if(n)o.name=n;return o}
+var SYNCD={};
+function syncNames(){if(!LIVE||!ME.admin)return;Object.keys(ADM).forEach(function(k){if(!(ME.owner||k===UID))return;var b=BIN[k],nm=bname(k);if(!b||!nm||b.name===nm||SYNCD[k+nm])return;SYNCD[k+nm]=1;DB.doc("binaan/"+k).set({name:nm},{merge:true}).catch(function(e){console.error(e)})})}
 function pwName(u){var a=ADM[u]||{};return a.name||a.email||"Pengawas lain"}
 function pemb(){return !LIVE||(ME.role==="pengawas"&&!!cur&&(ME.owner||cur.pw===UID))}
 function opCan(){return LIVE&&ME.role==="sekolah"&&!!cur&&ME.npsn===cur.npsn}
@@ -456,7 +460,7 @@ function fillPick(){
   var pvp=$("pp").value,pvs=$("ps").value,uids={};
   SCH.forEach(function(s){if(s.pw)uids[s.pw]=1});Object.keys(PUB).forEach(function(u){uids[u]=1});
   var ids=Object.keys(uids),g0=LIVE?REG[UID]:null,d0=LIVE?DEC[UID]:null,ok0=LIVE&&!!ME.npsn;
-  $("pp").innerHTML=ids.length?ids.map(function(u){var nm=(PUB[u]||{}).name||(ADM[u]||{}).name||(u===OWNERUID?"Admin utama":"Pengawas "+u.slice(0,6));return '<option value="'+esc(u)+'">'+esc(nm)+'</option>'}).join(""):'<option value="">'+(LIVE?"Belum ada pengawas":"Semua sekolah (demo)")+'</option>';
+  $("pp").innerHTML=ids.length?ids.map(function(u){var nm=(PUB[u]||{}).name||(BIN[u]||{}).name||(ADM[u]||{}).name||(u===OWNERUID?"Admin utama":"Pengawas "+u.slice(0,6));return '<option value="'+esc(u)+'">'+esc(nm)+'</option>'}).join(""):'<option value="">'+(LIVE?"Belum ada pengawas":"Semua sekolah (demo)")+'</option>';
   var sel=pvp;if(!sel){if(ok0&&OWN[ME.npsn])sel=OWN[ME.npsn].uid;else if(g0&&g0.pw)sel=g0.pw}
   if(sel&&uids[sel])$("pp").value=sel;
   var pw=$("pp").value,L=SCH.filter(function(s){return !LIVE||s.pw===pw});
@@ -488,7 +492,7 @@ async function addApprove(u,n){
   if(OWN[n]&&OWN[n].uid!==pw&&!OWN[n].dflt){toast("Sekolah ini sudah menjadi binaan pengawas lain");return}
   try{var cur=((BIN[pw]||{}).schools)||{};
     if(!cur[n]){if(Object.keys(cur).length>=MAX_SEKOLAH){toast("Maksimal "+MAX_SEKOLAH+" sekolah binaan");return}
-      var sc=Object.assign({},cur);sc[n]={nama:nama,ts:Date.now()};await DB.doc("binaan/"+pw).set({schools:sc});masAddOne(n,nama)}
+      var sc=Object.assign({},cur);sc[n]={nama:nama,ts:Date.now()};await DB.doc("binaan/"+pw).set(bdoc(pw,sc));masAddOne(n,nama)}
     await DB.doc("appr/"+n).set({uid:u,ts:Date.now(),pw:pw});toast("Sekolah ditambahkan dan operator disetujui")}
   catch(e){console.error(e);fail()}}
 async function pgo(){
@@ -509,14 +513,14 @@ function addSchool(n,nama){if(!n){toast("Pilih sekolah dulu");return}
   if(Object.keys((BIN[tp()]||{}).schools||{}).length>=MAX_SEKOLAH){toast("Satu pengawas maksimal "+MAX_SEKOLAH+" sekolah binaan");return}
   if(OWN[n]){toast(OWN[n].uid===tp()?"Sekolah sudah ada di daftar binaan Anda":"Sekolah ini sudah menjadi binaan pengawas lain");return}
   var sc=Object.assign({},(BIN[tp()]||{}).schools||{});sc[n]={nama:nama,ts:Date.now()};
-  DB.doc("binaan/"+tp()).set({schools:sc}).then(function(){toast("Sekolah ditambahkan")},fail);return true}
+  DB.doc("binaan/"+tp()).set(bdoc(tp(),sc)).then(function(){toast("Sekolah ditambahkan")},fail);return true}
 function delSchool(n,pwx){var o=OWN[n],pw=pwx||(o&&o.uid)||tp();
   if(!LIVE||ME.role!=="pengawas"||!(ME.owner||pw===UID)){toast("Hanya admin atau pengawas pembina sekolah ini yang dapat menghapus");return}
   var b=BIN[pw]||{},sc=Object.assign({},b.schools||{}),nm=(sc[n]&&sc[n].nama)||MAS[n]||("Sekolah "+n);
   if(!sc[n]){toast("Sekolah ini tidak ada di daftar binaan");return}
   if(!confirm("Hapus "+nm+" dari daftar sekolah binaan?"+(APPR[n]?" Akun operatornya juga akan diputus.":"")+" Dokumen yang sudah diunggah tidak ikut terhapus."))return;
   delete sc[n];
-  DB.doc("binaan/"+pw).set({schools:sc}).then(function(){if(APPR[n])DB.doc("appr/"+n).delete();SEL.delete(n);chkRender();if(location.hash==="#sekolah-"+n)location.hash="daftar";toast("Sekolah dihapus dari daftar binaan")},fail)}
+  DB.doc("binaan/"+pw).set(bdoc(pw,sc)).then(function(){if(APPR[n])DB.doc("appr/"+n).delete();SEL.delete(n);chkRender();if(location.hash==="#sekolah-"+n)location.hash="daftar";toast("Sekolah dihapus dari daftar binaan")},fail)}
 
 var TP=null,OWNERUID=null,MAS={},SEL=new Set();MASTER.forEach(function(x){MAS[x[0]]=x[1]});
 function tp(){return TP||UID}
@@ -544,7 +548,7 @@ async function saveSel(){
   if(blocked.length){toast("Sudah punya operator yang disetujui admin/pengawas lain: "+blocked.join(", ")+". Hubungi admin utama.");return}
   var linked=removed.filter(function(n){return APPR[n]});
   if(linked.length&&!confirm("Melepas "+linked.length+" sekolah yang sudah punya operator akan memutus akun operatornya. Lanjutkan?"))return;
-  try{await DB.doc("binaan/"+tp()).set({schools:ns});linked.forEach(function(n){DB.doc("appr/"+n).delete()});BIN[tp()]=Object.assign({},BIN[tp()]||{},{schools:ns});$("bq").value="";chkRender();toast("Pilihan sekolah binaan disimpan")}catch(e){fail()}}
+  try{await DB.doc("binaan/"+tp()).set(bdoc(tp(),ns));linked.forEach(function(n){DB.doc("appr/"+n).delete()});BIN[tp()]=Object.assign({},BIN[tp()]||{},bdoc(tp(),ns));$("bq").value="";chkRender();toast("Pilihan sekolah binaan disimpan")}catch(e){fail()}}
 function parseMas(t){var o={},bad=0;t.split(/\r?\n/).forEach(function(l){l=l.trim();if(!l)return;var m=/^(\d{5,10})\s*[;,\t]\s*(.+)$/.exec(l);if(m)o[m[1]]=m[2].trim().toUpperCase();else bad++});return {o:o,bad:bad}}
 function masAddOne(n,nama){if(MAS[n])return;var f={};f["schools."+n]=nama;DB.doc("master/sekolah").update(f).catch(function(e){console.error(e)})}
 async function masAdd(){var r=parseMas($("mta").value),n=Object.keys(r.o).length;
@@ -743,7 +747,7 @@ async function startLive(u){
     var idf=function(x){return x};
     var qs=function(n,q,get,put){q.onSnapshot(function(c){var o={};c.docs.forEach(function(x){o[x.id]=get(x.data()||{})});put(o);ready(n)},er)};
     var ds=function(n,r,get,put){r.onSnapshot(function(x){put(x.exists?get(x.data()||{}):null);ready(n)},er)};
-    qs("binaan",DB.collection("binaan"),idf,function(o){BIN=o});
+    qs("binaan",DB.collection("binaan"),idf,function(o){BIN=o;syncNames()});
     qs("acts",DB.collection("acts"),function(x){return x.list||[]},function(o){ACTS=o});
     if(ME.admin){
       if(ME.owner)qs("verif",DB.collection("verif"),function(x){return x.st||{}},function(o){VER=o});
@@ -764,7 +768,7 @@ async function startLive(u){
       if(ME.owner&&OWNERUID!==UID&&!window.ENS){window.ENS=1;DB.doc("master/sekolah").set({schools:MAS,ownerUid:UID}).catch(function(){})}
       if(MR)sync();if($("dop").open){chkRender();ownList()}},er);
     if(ME.owner){
-      DB.collection("admins").onSnapshot(function(c){var o={};c.docs.forEach(function(x){o[x.id]=x.data()});ADM=o;Object.keys(o).forEach(function(k){var nm=o[k].name||o[k].email||"Pengawas";if(!PUB[k]||PUB[k].name!==nm)DB.doc("pubpw/"+k).set({name:nm}).catch(function(e){console.error(e);if(!window.PWARN){window.PWARN=1;toast("Nama pengawas belum bisa disimpan untuk operator. Tambahkan aturan pubpw di Firestore lalu muat ulang.")}})});if(MR)sync()},er);
+      DB.collection("admins").onSnapshot(function(c){var o={};c.docs.forEach(function(x){o[x.id]=x.data()});ADM=o;syncNames();Object.keys(o).forEach(function(k){var nm=o[k].name||o[k].email||"Pengawas";if(!PUB[k]||PUB[k].name!==nm)DB.doc("pubpw/"+k).set({name:nm}).catch(function(e){console.error(e);if(!window.PWARN){window.PWARN=1;toast("Nama pengawas belum bisa disimpan untuk operator. Tambahkan aturan pubpw di Firestore lalu muat ulang.")}})});if(MR)sync()},er);
       DB.collection("preq").onSnapshot(function(c){var o={};c.docs.forEach(function(x){o[x.id]=x.data()});PREQ=o;if(MR)sync()},function(e){console.error(e);toast("Permintaan pengawas tidak bisa dibaca"+((e&&e.code==="permission-denied")?": aturan Firestore koleksi preq belum mengizinkan admin utama membaca":""))});
     }
     if(ME.admin)DB.doc("pubpw/"+UID).set({name:u.displayName||u.email||"Pengawas"}).catch(function(e){console.error(e);if(!window.PWARN){window.PWARN=1;toast("Nama pengawas belum bisa disimpan untuk operator. Tambahkan aturan pubpw di Firestore lalu muat ulang.")}});
