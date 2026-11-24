@@ -238,6 +238,7 @@ tr:target td,tr.flash td{background:var(--warn-bg)}
 <p style="margin-top:10px"><button class="btn" id="afor" type="button" style="border:0;background:none;text-decoration:underline;padding:0">Lupa kata sandi?</button></p></dialog>
 <dialog id="dacc"><h2>Akun saya</h2><p id="ainfo" class="note"></p>
 <p><button class="btn" id="rver" type="button" hidden>Kirim ulang email verifikasi</button></p>
+<h3>Ubah nama</h3><input id="cnm" placeholder="Nama lengkap" autocomplete="name" style="width:100%;padding:8px;margin:4px 0"><p><button class="btn go" id="cnb" type="button">Simpan nama</button></p>
 <h3>Ubah kata sandi</h3>
 <input id="cpw" type="password" placeholder="Kata sandi saat ini" autocomplete="current-password" style="width:100%;padding:8px;margin:4px 0">
 <input id="npw" type="password" placeholder="Kata sandi baru (minimal 6 karakter)" autocomplete="new-password" style="width:100%;padding:8px;margin:4px 0">
@@ -502,6 +503,7 @@ async function notPw(){
     var r=DB.doc("preq/"+UID),s=await r.get();
     if(!s.exists&&AUTOREQ&&u){AUTOREQ=false;await r.set({name:u.displayName||u.email,email:u.email,ts:Date.now()});s=await r.get()}
     if(s.exists){
+      if(u&&(s.data().name||"")!==(u.displayName||u.email))r.set({name:u.displayName||u.email},{merge:true}).catch(function(){});
       m.style.color="#b7791f";b.hidden=true;
       m.textContent="Menunggu persetujuan admin. Pengajuan pengawas Anda sudah terkirim. Halaman ini akan terbuka otomatis setelah disetujui.";
       if(!window.AWATCH){window.AWATCH=1;DB.doc("admins/"+UID).onSnapshot(function(x){if(x.exists)location.reload()},function(){})}
@@ -543,6 +545,7 @@ document.addEventListener("click",function(e){
   else if(b.id==="spw"){var iw=$("apw"),sh=iw.type==="password";iw.type=sh?"text":"password";$("apw2").type=iw.type;b.textContent=sh?"Sembunyikan":"Lihat"}
   else if(b.id==="out")openAcc()
   else if(b.id==="cpb")changePw()
+  else if(b.id==="cnb")saveName()
   else if(b.id==="rver"){AUTH.currentUser.sendEmailVerification().then(function(){toast("Email verifikasi dikirim")},function(){toast("Gagal mengirim, coba lagi nanti")})}
   else if(b.id==="logout")AUTH.signOut().then(function(){location.hash="masuk";location.reload()})
   else if(b.id==="eacts")openEd()
@@ -608,7 +611,12 @@ async function resetPw(){var em=$("aem").value.trim();
   catch(e){amsg(AERR[e.code]||("Gagal: "+(e.message||e)))}}
 function openAcc(){var u=AUTH.currentUser;if(!u)return;
   $("ainfo").innerHTML=esc(u.displayName||"-")+"<br>"+esc(u.email)+"<br>Peran: "+(ME.role==="pengawas"?"Pengawas":"Operator / satuan pendidikan")+"<br>Email "+(u.emailVerified?"sudah diverifikasi":"belum diverifikasi");
-  $("rver").hidden=u.emailVerified;$("cpw").value=$("npw").value="";$("cmsg").textContent="";$("dacc").showModal()}
+  $("cnm").value=u.displayName||"";$("rver").hidden=u.emailVerified;$("cpw").value=$("npw").value="";$("cmsg").textContent="";$("dacc").showModal()}
+async function saveName(){var u=AUTH.currentUser,n=$("cnm").value.trim();if(!n){toast("Isi nama lengkap");return}
+  try{await u.updateProfile({displayName:n});
+    for(var c of ["preq","reg"]){var r=DB.doc(c+"/"+UID),s=await r.get();if(s.exists)await r.set({name:n},{merge:true})}
+    var ai=$("ainfo").innerHTML;$("ainfo").innerHTML=esc(n)+ai.slice(ai.indexOf("<br>"));toast("Nama diperbarui")}
+  catch(e){console.error(e);fail()}}
 async function changePw(){var u=AUTH.currentUser,cm=$("cmsg"),cur=$("cpw").value,nw=$("npw").value;
   var say2=function(t,ok){cm.textContent=t;cm.style.color=ok?"#1a7f4b":"#d9364a"};
   if(!cur||nw.length<6){say2("Isi kata sandi saat ini dan kata sandi baru (minimal 6 karakter).");return}
