@@ -316,7 +316,7 @@ function mine(){return SCH.filter(function(s){return !LIVE||ME.owner||s.pw===UID
 function bname(u){var a=ADM[u]||{},c=AUTH&&AUTH.currentUser;return (u===UID&&c&&(c.displayName||c.email))||a.name||a.email||(PUB[u]||{}).name||(BIN[u]||{}).name||""}
 function bdoc(pw,sc){var o={schools:sc},n=bname(pw);if(n)o.name=n;return o}
 var SYNCD={};
-function syncNames(){if(!LIVE||!ME.admin)return;Object.keys(ADM).forEach(function(k){if(!(ME.owner||k===UID))return;var b=BIN[k],nm=bname(k);if(!b||!nm||b.name===nm||SYNCD[k+nm])return;SYNCD[k+nm]=1;DB.doc("binaan/"+k).set({name:nm},{merge:true}).catch(function(e){console.error(e)})})}
+function syncNames(){if(!LIVE||!ME.admin)return;Object.keys(ADM).concat(ADM[UID]?[]:[UID]).forEach(function(k){if(!(ME.owner||k===UID))return;var b=BIN[k],nm=bname(k);if(b&&!nm&&!window.NMEMPTY){window.NMEMPTY=1;toast("Ada pengawas tanpa nama/email di data admin. Isi namanya lewat Kelola akun pengawas itu.")}if(!b||!nm||b.name===nm||SYNCD[k+nm])return;SYNCD[k+nm]=1;DB.doc("binaan/"+k).set({name:nm},{merge:true}).then(function(){if(!window.NMOK){window.NMOK=1;toast("Nama pengawas disimpan: "+nm+". Muat ulang halaman satuan pendidikan.")}}).catch(function(e){console.error(e);if(!window.NMERR){window.NMERR=1;toast("Gagal menyimpan nama pengawas ("+(e.code||"error")+"). Periksa aturan tulis koleksi binaan di Firestore.")}})})}
 function pwName(u){var a=ADM[u]||{};return a.name||a.email||"Pengawas lain"}
 function pemb(){return !LIVE||(ME.role==="pengawas"&&!!cur&&(ME.owner||cur.pw===UID))}
 function opCan(){return LIVE&&ME.role==="sekolah"&&!!cur&&ME.npsn===cur.npsn}
