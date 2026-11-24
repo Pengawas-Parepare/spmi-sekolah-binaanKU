@@ -735,7 +735,7 @@ async function saveEd(){if(!ME.owner){toast("Hanya admin yang dapat mengelola da
 async function startLive(u){
   if(LIVE)return;
   try{UID=u.uid;
-    var ad=await DB.doc("admins/"+UID).get();ME.admin=ad.exists;ME.owner=ad.exists&&(ad.data()||{}).owner===true;ME.role=ME.admin?"pengawas":"none";
+    var ad=await DB.doc("admins/"+UID).get();ME.admin=ad.exists;ME.owner=ad.exists&&(ad.data()||{}).owner===true;ME.role=ME.admin?"pengawas":"none";if(ME.admin){var _u=AUTH&&AUTH.currentUser,_nm=(_u&&(_u.displayName||_u.email))||(ad.data()||{}).name||(ad.data()||{}).email;if(_nm)DB.doc("pubpw/"+UID).set({name:_nm}).catch(function(e){console.error(e)})}
     LIVE=true;SCH=[];cur=null;D=[];
     var er=function(){toast("Koneksi data bermasalah, muat ulang halaman")};
     var LDK=ME.admin?["binaan","acts","verif","reg","appr","subs","dec"]:["binaan","acts","reg","dec","appr","subs"];
