@@ -256,7 +256,7 @@ tr:target td,tr.flash td{background:var(--warn-bg)}
 <input id="lku" placeholder="https://drive.google.com/..." style="width:100%;padding:8px;margin:4px 0"><input id="lkn" placeholder="Nama dokumen (opsional)" style="width:100%;padding:8px;margin:4px 0"></details>
 <p id="lkm" style="min-height:1.4em;margin:4px 0"></p>
 <p><button class="btn go" id="lks" type="button">Simpan</button> <button class="btn" type="button" onclick="this.closest('dialog').close()">Batal</button></p></dialog>
-<dialog id="ded"><h2>Kelola daftar dokumen</h2><p class="note">Berlaku untuk semua sekolah binaan Anda. Kolom: Tahap, Aktivitas/dokumen yang diminta, Keterangan.</p>
+<dialog id="ded"><h2>Kelola daftar dokumen</h2><p class="note">Hanya admin yang bisa mengubah. Berlaku untuk semua sekolah binaan pengawas pemilik sekolah yang sedang dibuka. Kolom: Tahap, Aktivitas/dokumen yang diminta, Keterangan.</p>
 <div id="edl"></div><p style="margin-top:10px"><button class="btn" id="eadd">Tambah aktivitas</button> <button class="btn go" id="esave">Simpan</button> <button class="btn" onclick="this.closest('dialog').close()">Batal</button></p></dialog>
 <dialog id="dnote"><h2>Alasan belum valid</h2><p class="note" id="ntt"></p>
 <p class="note">Tulis bagian yang perlu diperbaiki, misalnya halaman, data, atau tanda tangan yang kurang. Catatan ini terlihat oleh sekolah.</p>
@@ -379,7 +379,7 @@ function render(){
   summary();
   var fs=$("fTahap"),cv=fs.value,T2=[];D.forEach(function(r){if(T2.indexOf(r.tahap)<0)T2.push(r.tahap)});
   fs.innerHTML='<option value="">Semua tahap</option>'+T2.map(function(t){return '<option>'+esc(t)+'</option>'}).join("");fs.value=cv;
-  $("eacts").hidden=!(LIVE&&pemb());
+  $("eacts").hidden=!(LIVE&&ME.owner&&pemb());
   var q=$("q").value.toLowerCase(),t=$("fTahap").value,s=$("fStatus").value;
   var rows=D.filter(function(r){return (!t||r.tahap===t)&&(!s||r.st===s)&&(!q||r.akt.toLowerCase().indexOf(q)>-1)});
   $("tb").innerHTML=rows.map(function(r){
@@ -484,7 +484,7 @@ async function addApprove(u,n){
   if(OWN[n]&&OWN[n].uid!==pw&&!OWN[n].dflt){toast("Sekolah ini sudah menjadi binaan pengawas lain");return}
   try{var cur=((BIN[pw]||{}).schools)||{};
     if(!cur[n]){if(Object.keys(cur).length>=MAX_SEKOLAH){toast("Maksimal "+MAX_SEKOLAH+" sekolah binaan");return}
-      var sc=Object.assign({},cur);sc[n]={nama:nama,ts:Date.now()};await DB.doc("binaan/"+pw).set({schools:sc})}
+      var sc=Object.assign({},cur);sc[n]={nama:nama,ts:Date.now()};await DB.doc("binaan/"+pw).set({schools:sc});masAddOne(n,nama)}
     await DB.doc("appr/"+n).set({uid:u,ts:Date.now(),pw:pw});toast("Sekolah ditambahkan dan operator disetujui")}
   catch(e){console.error(e);fail()}}
 async function pgo(){
@@ -537,6 +537,7 @@ async function saveSel(){
   if(linked.length&&!confirm("Melepas "+linked.length+" sekolah yang sudah punya operator akan memutus akun operatornya. Lanjutkan?"))return;
   try{await DB.doc("binaan/"+tp()).set({schools:ns});linked.forEach(function(n){DB.doc("appr/"+n).delete()});toast("Pilihan sekolah binaan disimpan")}catch(e){fail()}}
 function parseMas(t){var o={},bad=0;t.split(/\r?\n/).forEach(function(l){l=l.trim();if(!l)return;var m=/^(\d{5,10})\s*[;,\t]\s*(.+)$/.exec(l);if(m)o[m[1]]=m[2].trim().toUpperCase();else bad++});return {o:o,bad:bad}}
+function masAddOne(n,nama){if(MAS[n])return;var f={};f["schools."+n]=nama;DB.doc("master/sekolah").update(f).catch(function(e){console.error(e)})}
 async function masAdd(){var r=parseMas($("mta").value),n=Object.keys(r.o).length;
   if(!n){toast("Format: NPSN;NAMA SEKOLAH, satu per baris");return}
   try{await DB.doc("master/sekolah").set({schools:Object.assign({},MAS,r.o),ownerUid:UID});$("mta").value="";toast(n+" sekolah ditambahkan/diperbarui"+(r.bad?", "+r.bad+" baris dilewati":""))}catch(e){fail()}}
@@ -610,7 +611,7 @@ document.addEventListener("click",function(e){
   else if(d.prej)DB.doc("preq/"+d.prej).delete().then(function(){toast("Permintaan ditolak")},fail)
   else if(d.pdel){if(confirm("Cabut hak pengawas akun ini? Sekolah binaannya tetap tersimpan."))DB.doc("admins/"+d.pdel).delete().then(function(){DB.doc("pubpw/"+d.pdel).delete().catch(function(){});toast("Hak pengawas dicabut")},fail)}
   else if(b.id==="reqp")reqPw()
-  else if(b.id==="bcus"){var n=$("bn").value.trim(),nm=$("bnm").value.trim();if(!/^\d{5,10}$/.test(n)||!nm){toast("Isi NPSN (angka) dan nama sekolah");return}if(addSchool(n,nm.toUpperCase())){SEL.add(n);chkRender()}$("bn").value="";$("bnm").value=""}
+  else if(b.id==="bcus"){var n=$("bn").value.trim(),nm=$("bnm").value.trim();if(!/^\d{5,10}$/.test(n)||!nm){toast("Isi NPSN (angka) dan nama sekolah");return}if(addSchool(n,nm.toUpperCase())){masAddOne(n,nm.toUpperCase());SEL.add(n);chkRender()}$("bn").value="";$("bnm").value=""}
   else if(b.id==="ops")openOps()
   else if(b.id==="bsave")saveSel()
   else if(b.id==="madd")masAdd()
@@ -712,12 +713,13 @@ async function saveLink(){if(UPBUSY)return;
   var items=Object.assign({},SUBS[UID]||{});items[row.id]={n:name,url:url,at:stamp()};
   try{await DB.doc("subs/"+UID).set({items:items,pw:cur.pw});$("dlk").close();toast("Dokumen tersimpan")}catch(e){fail()}
   UPBUSY=false;$("lks").disabled=false}
-function openEd(){EDIT=D.map(function(r){return {id:r.id,tahap:r.tahap,akt:r.akt,ket:r.ket||""}});edRender();$("ded").showModal()}
+function openEd(){if(!ME.owner){toast("Hanya admin yang dapat mengelola daftar dokumen");return}
+  EDIT=D.map(function(r){return {id:r.id,tahap:r.tahap,akt:r.akt,ket:r.ket||""}});edRender();$("ded").showModal()}
 function edRender(){$("edl").innerHTML=EDIT.map(function(a,i){var f=function(k,p){return '<input data-f="'+k+'" data-i="'+i+'" value="'+esc(a[k])+'" placeholder="'+p+'">'};
   return '<div class="edr"><b>'+(i+1)+'</b>'+f("tahap","Tahap")+f("akt","Aktivitas / dokumen yang diminta")+f("ket","Keterangan")+'<span><button class="btn" data-mv="-1" data-i="'+i+'">↑</button> <button class="btn" data-mv="1" data-i="'+i+'">↓</button> <button class="btn" data-rm="1" data-i="'+i+'">Hapus</button></span></div>'}).join("")||"Daftar kosong."}
 function mvEd(i,d){var j=i+d;if(j<0||j>=EDIT.length)return;var t=EDIT[i];EDIT[i]=EDIT[j];EDIT[j]=t;edRender()}
 $("edl").addEventListener("input",function(e){var t=e.target;if(t.dataset&&t.dataset.f)EDIT[+t.dataset.i][t.dataset.f]=t.value});
-async function saveEd(){
+async function saveEd(){if(!ME.owner){toast("Hanya admin yang dapat mengelola daftar dokumen");return}
   if(!EDIT.length){toast("Daftar tidak boleh kosong");return}
   for(var i=0;i<EDIT.length;i++){if(!EDIT[i].tahap.trim()||!EDIT[i].akt.trim()){toast("Baris "+(i+1)+": Tahap dan Aktivitas wajib diisi");return}}
   try{await DB.doc("acts/"+((cur&&cur.pw)||UID)).set({list:EDIT.map(function(a){return {id:a.id,tahap:a.tahap.trim(),akt:a.akt.trim(),ket:(a.ket||"").trim()}})});$("ded").close();toast("Daftar dokumen disimpan")}catch(e){fail()}}
