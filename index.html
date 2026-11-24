@@ -308,6 +308,10 @@ function rows(l){return (l||DEF).map(function(r,j){return {no:j+1,id:r.id,tahap:
 function demo(){SCH=MASTER.map(function(s,i){var rs=rows();if(i===0)rs.forEach(function(r,j){r.tgl=BASE[j][2];r.file={n:"Dokumen arsip",at:r.tgl};r.st="valid"});return {npsn:s[0],nama:s[1],pw:null,rows:rs}});cur=SCH[0];D=cur.rows}
 function owners(){var o={};Object.keys(BIN).forEach(function(u){var sc=(BIN[u]||{}).schools||{};Object.keys(sc).forEach(function(n){var t=sc[n].ts||0;if(!o[n]||t<o[n].ts)o[n]={uid:u,ts:t,nama:sc[n].nama}})});
   if(OWNERUID)Object.keys(MAS).forEach(function(n){if(!o[n])o[n]={uid:OWNERUID,ts:0,nama:MAS[n],dflt:true}});return o}
+function ownTag(s){if(!LIVE||!ME.owner)return "";var o=OWN[s.npsn]||{},b="display:inline-block;margin-left:6px;padding:1px 9px;border-radius:99px;font-size:.75rem;font-weight:600;";
+  if(o.dflt)return '<span style="'+b+'background:var(--wait-bg);color:var(--wait)">Belum ada pengawas</span>';
+  if(s.pw===UID)return '<span style="'+b+'background:var(--ok-bg);color:var(--ok)">Binaan admin</span>';
+  return '<span style="'+b+'background:var(--warn-bg);color:var(--warn)">Binaan: '+esc(pwName(s.pw))+'</span>'}
 function mine(){return SCH.filter(function(s){return !LIVE||ME.owner||s.pw===UID})}
 function pwName(u){var a=ADM[u]||{};return a.name||a.email||"Pengawas lain"}
 function pemb(){return !LIVE||(ME.role==="pengawas"&&!!cur&&(ME.owner||cur.pw===UID))}
@@ -426,7 +430,7 @@ function charts(L){var el=$("cg");if(!L.length){el.innerHTML="";return}
 function listView(){var L=mine();charts(L);
   if(LIVE&&MR&&ME.role==="pengawas"&&!L.length&&!window.AUTOOP){window.AUTOOP=1;openOps()}
   $("tl").innerHTML=L.length?L.map(function(s,i){var v=s.rows.filter(function(r){return r.st==="valid"}).length;
-    return '<tr><td class="num">'+(i+1)+'</td><td>'+esc(s.npsn)+'</td><td>'+esc(s.nama)+(ME.owner&&s.pw!==UID?' <small class="note">('+esc(pwName(s.pw))+')</small>':'')+'</td><td>Kota Parepare</td><td>Kec. Bacukiki Barat</td><td>SD</td><td><div class="mini"><div><i style="width:'+Math.round(v/(s.rows.length||1)*100)+'%"></i></div>'+v+'/'+s.rows.length+'</div></td><td><button class="btn go" data-open="'+esc(s.npsn)+'">Lihat laporan SPMI</button>'+(LIVE&&ME.role==="pengawas"&&(ME.owner||s.pw===UID)&&!(OWN[s.npsn]&&OWN[s.npsn].dflt)?' <button class="btn rm" data-bdel="'+esc(s.npsn)+'">Hapus</button>':'')+'</td></tr>'}).join(""):'<tr><td colspan="8" class="empty">Belum ada sekolah binaan. Tambahkan lewat tombol Kelola akun.</td></tr>';
+    return '<tr><td class="num">'+(i+1)+'</td><td>'+esc(s.npsn)+'</td><td>'+esc(s.nama)+ownTag(s)+'</td><td>Kota Parepare</td><td>Kec. Bacukiki Barat</td><td>SD</td><td><div class="mini"><div><i style="width:'+Math.round(v/(s.rows.length||1)*100)+'%"></i></div>'+v+'/'+s.rows.length+'</div></td><td><button class="btn go" data-open="'+esc(s.npsn)+'">Lihat laporan SPMI</button>'+(LIVE&&ME.role==="pengawas"&&(ME.owner||s.pw===UID)&&!(OWN[s.npsn]&&OWN[s.npsn].dflt)?' <button class="btn rm" data-bdel="'+esc(s.npsn)+'">Hapus</button>':'')+'</td></tr>'}).join(""):'<tr><td colspan="8" class="empty">Belum ada sekolah binaan. Tambahkan lewat tombol Kelola akun.</td></tr>';
 }
 function route(e){
   var h=location.hash.slice(1)||"masuk",R=ME.role,m=/^sekolah-(\d+)$/.exec(h);
