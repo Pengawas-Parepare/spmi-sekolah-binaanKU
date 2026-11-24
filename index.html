@@ -149,14 +149,18 @@ tr:target td,tr.flash td{background:var(--warn-bg)}
 <div class="who"><button class="btn lg pg" data-login="pengawas">Pengawas</button><button class="btn lg sk" data-login="sekolah">Satuan Pendidikan</button></div>
 <p id="lmsg" style="color:#d9364a;min-height:1.4em;margin:0"></p>
 <button class="btn go" id="reqp" hidden>Ajukan sebagai pengawas</button>
-<p class="note">Masuk dengan email dan kata sandi. Pengawas didaftarkan oleh admin utama. Operator memilih sekolahnya, lalu menunggu persetujuan pengawas.</p>
+<p class="note">Pertama kali? Tekan Pengawas atau Satuan Pendidikan, lalu daftar dengan nama, email, dan kata sandi. Pendaftaran menunggu persetujuan: pengawas oleh admin utama, operator oleh pengawas sekolahnya.</p>
 <button class="btn" id="out" hidden>Akun saya</button>
 </div>
 <svg class="cv-wave" viewBox="0 0 580 46" preserveAspectRatio="none" aria-hidden="true"><path d="M0 30C150 0 330 56 580 8V46H0z" fill="#0b2a6b"/><path d="M0 30C150 0 330 56 580 8" stroke="#d7a93a" stroke-width="3" fill="none"/></svg>
 <div class="cv-foot"><p><i></i>Mutu Hari Ini, Aset Masa Depan<i></i></p></div>
 </div></div></div>
 
-<div id="vPick" hidden><div class="wrap"><div class="panel hero"><h1>Satuan Pendidikan</h1><p>Pilih sekolah Anda lalu masuk. Jika akun Anda belum terdaftar, pendaftaran dikirim ke pengawas untuk disetujui.</p><div class="who"><select id="ps" style="padding:10px;min-width:260px;max-width:100%;border-radius:8px"></select><button class="btn lg sk" id="pgo">Masuk</button></div><p id="pmsg" style="min-height:1.4em;margin:0 auto 12px;max-width:520px"></p><button class="btn" id="home3">Halaman awal</button></div></div></div>
+<div id="vPick" hidden><div class="wrap"><div class="panel hero"><h1>Satuan Pendidikan</h1><p>Pilih pengawas Anda, lalu pilih sekolah Anda. Jika sekolah belum ada di daftar, pilih "Sekolah saya belum ada di daftar" dan isi NPSN serta nama sekolah. Pendaftaran menunggu persetujuan pengawas.</p>
+<div class="who" style="margin-bottom:0"><select id="pp" aria-label="Pengawas" style="padding:10px;min-width:260px;max-width:100%;border-radius:8px"></select></div>
+<div class="who" style="margin-top:8px"><select id="ps" aria-label="Sekolah" style="padding:10px;min-width:260px;max-width:100%;border-radius:8px"></select></div>
+<div class="who" id="pnew" hidden style="margin-top:8px"><input id="pn" placeholder="NPSN" style="padding:10px;width:140px;border-radius:8px;border:1px solid var(--line)"><input id="pnm" placeholder="Nama sekolah" style="padding:10px;min-width:220px;border-radius:8px;border:1px solid var(--line)"></div>
+<div class="who" style="margin-top:8px"><button class="btn lg sk" id="pgo">Masuk</button></div><p id="pmsg" style="min-height:1.4em;margin:0 auto 12px;max-width:520px"></p><button class="btn" id="home3">Halaman awal</button></div></div></div>
 <div id="vDaftar" hidden><div class="wrap">
 <div class="top"><h1>Daftar sekolah binaan anda</h1><span><button class="btn" id="ops" hidden>Kelola akun</button> <button class="btn" id="guide">Panduan SPMI</button></span></div>
 <p class="note">Status validasi di daftar ini sama dengan yang ada di laporan masing-masing sekolah.</p>
@@ -298,7 +302,7 @@ function toast(m){var t=$("toast");t.textContent=m;t.classList.add("show");clear
 function fail(){toast("Gagal menyimpan, coba lagi")}
 var LIVE=false,ME={role:"demo",npsn:null,admin:false},BIN={},SUBS={},VER={},REG={},APPR={},DEC={},LD={},OWN={},MR=false,UID=null,USER=null,DB=null,AS=null,upNo=0,SCH=[],cur=null,D=[];
 var DEF=BASE.map(function(r,j){return {id:"a"+(j+1),tahap:r[0],akt:r[1],ket:""}});
-var MAX_SEKOLAH=15,ADM={},PREQ={},AUTOGO=false,WANT=null,ACTS={},PROF={},EDIT=null,AUTH=null,CFG=false,pendingW=null,AUTOREQ=false;
+var MAX_SEKOLAH=15,ADM={},PUB={},PREQ={},AUTOGO=false,WANT=null,ACTS={},PROF={},EDIT=null,AUTH=null,CFG=false,pendingW=null,AUTOREQ=false;
 function actList(p){var l=ACTS[p];return l&&l.length?l:DEF}
 function rows(l){return (l||DEF).map(function(r,j){return {no:j+1,id:r.id,tahap:r.tahap,akt:r.akt,ket:r.ket||"",tgl:"-",st:"menunggu",note:"",file:null}})}
 function demo(){SCH=MASTER.map(function(s,i){var rs=rows();if(i===0)rs.forEach(function(r,j){r.tgl=BASE[j][2];r.file={n:"Dokumen arsip",at:r.tgl};r.st="valid"});return {npsn:s[0],nama:s[1],pw:null,rows:rs}});cur=SCH[0];D=cur.rows}
@@ -311,7 +315,7 @@ function opCan(){return LIVE&&ME.role==="sekolah"&&!!cur&&ME.npsn===cur.npsn}
 function stamp(){var d=new Date(),p=function(n){return String(n).padStart(2,"0")};return p(d.getDate())+"-"+p(d.getMonth()+1)+"-"+d.getFullYear()+" "+p(d.getHours())+":"+p(d.getMinutes())}
 function docCell(r){if(!r.file)return "-";if(r.file.url)return '<a class="btn" href="'+esc(r.file.url)+'" target="_blank" rel="noopener noreferrer">Buka dokumen</a><br><small>'+esc(r.file.n)+'</small>';return '<button class="btn" data-doc="'+r.no+'">Lihat/Unduh</button>'}
 function actCell(r){var h="";if(opCan())h+='<button class="btn go" data-up="'+r.no+'">'+(r.file?"Ganti dokumen":"Unggah dokumen")+'</button>'+(r.file?' <button class="btn rm" data-del="'+r.no+'">Hapus dokumen</button>':'');if(pemb())h+='<div class="acts"><button class="btn'+(r.st==="valid"?" on":"")+'" data-set="valid" data-no="'+r.no+'">Valid</button><button class="btn'+(r.st==="belum"?" on":"")+'" data-set="belum" data-no="'+r.no+'">Belum valid</button><button class="btn" data-set="menunggu" data-no="'+r.no+'">Batal validasi</button></div>';return h}
-function pend(){var mm={};(ME.owner?SCH:mine()).forEach(function(s){mm[s.npsn]=1});return Object.keys(REG).filter(function(u){var g=REG[u],d=DEC[u];return mm[g.npsn]&&!APPR[g.npsn]&&!(d&&d.npsn===g.npsn&&d.ts>g.ts)}).map(function(u){return {uid:u,npsn:REG[u].npsn}})}
+function pend(){var mm={};(ME.owner?SCH:mine()).forEach(function(s){mm[s.npsn]=1});return Object.keys(REG).filter(function(u){var g=REG[u],d=DEC[u];return (mm[g.npsn]||(g.manual&&!OWN[g.npsn]&&(ME.owner||g.pw===UID)))&&!APPR[g.npsn]&&!(d&&d.npsn===g.npsn&&d.ts>g.ts)}).map(function(u){return {uid:u,npsn:REG[u].npsn,manual:!!(REG[u].manual&&!OWN[REG[u].npsn])}})}
 function sync(){
   OWN=owners();
   SCH=Object.keys(OWN).sort().map(function(n){return {npsn:n,nama:OWN[n].nama,pw:OWN[n].uid,rows:rows(actList(OWN[n].uid))}});
@@ -330,6 +334,7 @@ function sync(){
     if(WANT==="pengawas"&&ME.role!=="pengawas"){notPw()}
     else if(!hh||hh==="masuk"||(hh==="pilih"&&ME.npsn&&WANT!=="sekolah")){
       location.hash=(ME.role==="pengawas"&&WANT!=="sekolah")?"daftar":ME.npsn?"sekolah-"+ME.npsn:"pilih"}}
+  if(window.WAITOP&&ME.npsn){window.WAITOP=false;location.hash="sekolah-"+ME.npsn}
   route();if($("dop").open)opList();
 }
 function noteCell(r){if(!r.file||r.st!=="belum")return "";
@@ -438,14 +443,54 @@ function route(e){
   $("back").hidden=LIVE&&R==="sekolah";$("ops").hidden=!(LIVE&&R==="pengawas");
   if(LIVE&&R==="pengawas"){var n=pend().length+(ME.owner?Object.keys(PREQ).filter(function(u){return !ADM[u]}).length:0);$("ops").textContent="Kelola sekolah dan operator"+(n?" ("+n+")":"");var pp=ME.owner?Object.keys(PREQ).filter(function(u){return !ADM[u]}).length:0;$("pnote").hidden=!pp;if(pp)$("pnote").textContent="Ada "+pp+" pengajuan pengawas baru menunggu persetujuan Anda. Buka Kelola sekolah dan operator, bagian Permintaan pengawas."}
   $("role").textContent=!LIVE?"Mode demo: belum terhubung ke akun, perubahan tidak tersimpan.":RL[R]?"Masuk sebagai "+RL[R]:"";
-  if(h==="pilih"){var pv=$("ps").value;$("ps").innerHTML=SCH.length?SCH.map(function(x){return '<option value="'+esc(x.npsn)+'">'+esc(x.nama)+' ('+esc(x.npsn)+')</option>'}).join(""):'<option value="">Belum ada sekolah terdaftar</option>';if(pv)$("ps").value=pv;else if(ME.npsn)$("ps").value=ME.npsn}
+  if(h==="pilih")fillPick();
   if(h==="daftar")listView();else if(m){$("chip").textContent=cur.nama+", NPSN "+cur.npsn;render()}
   if(e&&e.type)window.scrollTo(0,0);
 }
-function say(t){$("pmsg").textContent=t}
+function say(t,auto){$("pmsg").textContent=t;$("pmsg").dataset.auto=auto?"1":""}
+function fillPick(){
+  var pvp=$("pp").value,pvs=$("ps").value,uids={};
+  SCH.forEach(function(s){if(s.pw)uids[s.pw]=1});Object.keys(PUB).forEach(function(u){uids[u]=1});
+  var ids=Object.keys(uids),g0=LIVE?REG[UID]:null,d0=LIVE?DEC[UID]:null,ok0=LIVE&&!!ME.npsn;
+  $("pp").innerHTML=ids.length?ids.map(function(u){var nm=(PUB[u]||{}).name||(ADM[u]||{}).name||(u===OWNERUID?"Admin utama":"Pengawas "+u.slice(0,6));return '<option value="'+esc(u)+'">'+esc(nm)+'</option>'}).join(""):'<option value="">'+(LIVE?"Belum ada pengawas":"Semua sekolah (demo)")+'</option>';
+  var sel=pvp;if(!sel){if(ok0&&OWN[ME.npsn])sel=OWN[ME.npsn].uid;else if(g0&&g0.pw)sel=g0.pw}
+  if(sel&&uids[sel])$("pp").value=sel;
+  var pw=$("pp").value,L=SCH.filter(function(s){return !LIVE||s.pw===pw});
+  $("ps").innerHTML=L.map(function(x){return '<option value="'+esc(x.npsn)+'">'+esc(x.nama)+' ('+esc(x.npsn)+')</option>'}).join("")+(LIVE?'<option value="__baru">Sekolah saya belum ada di daftar</option>':'');
+  var tv=pvs;if(!tv){if(ok0)tv=ME.npsn;else if(g0)tv=OWN[g0.npsn]?g0.npsn:(g0.manual?"__baru":"")}
+  if(tv&&Array.prototype.some.call($("ps").options,function(o){return o.value===tv}))$("ps").value=tv;
+  $("pnew").hidden=$("ps").value!=="__baru";
+  if(g0&&g0.manual&&!OWN[g0.npsn]&&!$("pn").value){$("pn").value=g0.npsn;$("pnm").value=g0.nama||""}
+  if(!LIVE)return;
+  var rj0=!!(g0&&d0&&d0.npsn===g0.npsn&&d0.ts>g0.ts);
+  $("pgo").textContent=ok0?"Masuk":g0?"Cek status":"Kirim pendaftaran";
+  if(g0&&!ok0&&!rj0)window.WAITOP=true;
+  if(!$("pmsg").textContent||$("pmsg").dataset.auto==="1"){
+    var sn=g0?(OWN[g0.npsn]?OWN[g0.npsn].nama:(g0.nama||"")):"";
+    say(ok0?"Akun Anda sudah disetujui. Tekan Masuk.":g0?(rj0?"Pendaftaran Anda ditolak pengawas.":(OWN[g0.npsn]?"Menunggu persetujuan pengawas":"Menunggu pengawas menambahkan sekolah dan menyetujui")+(sn?" untuk "+sn:"")+". Halaman akan terbuka otomatis setelah disetujui."):"Pilih pengawas dan sekolah Anda lalu tekan Kirim pendaftaran. Anda akan menunggu persetujuan.",true)}}
+var DENIED="Pendaftaran ditolak: sekolah ini sudah memiliki operator yang mendaftar sebelumnya dan telah disetujui pengawas. Hubungi pengawas jika akun perlu diganti.";
+async function regNew(){
+  var n=$("pn").value.trim(),nm=$("pnm").value.trim().toUpperCase(),pw=$("pp").value,g=REG[UID],d=DEC[UID],u=AUTH.currentUser;
+  if(!pw){say("Pilih pengawas dulu.");return}
+  if(!/^\d{5,10}$/.test(n)||!nm){say("Isi NPSN (angka) dan nama sekolah.");return}
+  if(OWN[n]){say("Sekolah dengan NPSN itu sudah ada di daftar. Pilih pengawasnya, lalu pilih sekolah dari daftar.");return}
+  if(ME.npsn){say("Akun Anda sudah terhubung ke sekolah lain.");return}
+  if(g&&g.manual&&g.npsn===n&&!(d&&d.npsn===n&&d.ts>g.ts)){say("Pengajuan Anda masih menunggu pengawas menambahkan sekolah dan menyetujui.");return}
+  try{var ax=await DB.doc("appr/"+n).get();if(ax.exists){say(DENIED);return}}catch(e){}
+  DB.doc("reg/"+UID).set({npsn:n,nama:nm,manual:true,ts:Date.now(),pw:pw,name:(u.displayName||u.email),email:u.email}).then(function(){say("Pengajuan terkirim. Status: menunggu pengawas menambahkan sekolah dan menyetujui. Halaman akan terbuka otomatis setelah disetujui.")},function(e){say(e&&e.code==="permission-denied"?DENIED:"Gagal mengirim, coba lagi.")})}
+async function addApprove(u,n){
+  var g=REG[u]||{},pw=ME.owner?(g.pw||UID):UID,nama=g.nama||("Sekolah "+n);
+  if(APPR[n]){toast("Sekolah ini sudah memiliki operator yang disetujui");return}
+  if(OWN[n]&&OWN[n].uid!==pw&&!OWN[n].dflt){toast("Sekolah ini sudah menjadi binaan pengawas lain");return}
+  try{var cur=((BIN[pw]||{}).schools)||{};
+    if(!cur[n]){if(Object.keys(cur).length>=MAX_SEKOLAH){toast("Maksimal "+MAX_SEKOLAH+" sekolah binaan");return}
+      var sc=Object.assign({},cur);sc[n]={nama:nama,ts:Date.now()};await DB.doc("binaan/"+pw).set({schools:sc})}
+    await DB.doc("appr/"+n).set({uid:u,ts:Date.now(),pw:pw});toast("Sekolah ditambahkan dan operator disetujui")}
+  catch(e){console.error(e);fail()}}
 async function pgo(){
   var n=$("ps").value;if(!n)return;
-  if(!LIVE){location.hash="sekolah-"+n;return}
+  if(!LIVE){if(n==="__baru")return;location.hash="sekolah-"+n;return}
+  if(n==="__baru"){regNew();return}
   var a=APPR[n],g=REG[UID],d=DEC[UID];
   if(!a){try{var ax=await DB.doc("appr/"+n).get();if(ax.exists)a=ax.data()}catch(e){}}
   if(a&&a.uid===UID){location.hash="sekolah-"+n;return}
@@ -453,7 +498,7 @@ async function pgo(){
   if(ME.npsn){say("Akun Anda sudah terhubung ke sekolah lain.");return}
   var rj=false,mv=false;
   if(g&&g.npsn===n){mv=g.pw!==OWN[n].uid;rj=!!(d&&d.npsn===n&&d.ts>g.ts);if(!rj&&!mv){say("Pendaftaran Anda masih menunggu persetujuan pengawas.");return}}
-  DB.doc("reg/"+UID).set({npsn:n,ts:Date.now(),pw:OWN[n].uid,name:(AUTH.currentUser.displayName||AUTH.currentUser.email),email:AUTH.currentUser.email}).then(function(){say(mv?"Pengawas sekolah Anda telah berubah. Pengajuan baru sudah dikirim ke pengawas yang baru, tunggu persetujuannya lalu masuk lagi.":rj?"Pendaftaran sebelumnya ditolak. Pengajuan baru sudah dikirim ke pengawas, tunggu persetujuannya lalu masuk lagi.":"Pendaftaran terkirim. Tunggu persetujuan pengawas, lalu masuk lagi.")},function(){say("Gagal mendaftar, coba lagi.")})}
+  DB.doc("reg/"+UID).set({npsn:n,ts:Date.now(),pw:OWN[n].uid,name:(AUTH.currentUser.displayName||AUTH.currentUser.email),email:AUTH.currentUser.email}).then(function(){say(mv?"Pengawas sekolah Anda telah berubah. Pengajuan baru sudah dikirim ke pengawas yang baru, tunggu persetujuannya lalu masuk lagi.":rj?"Pendaftaran sebelumnya ditolak. Pengajuan baru sudah dikirim ke pengawas, tunggu persetujuannya lalu masuk lagi.":"Pendaftaran terkirim. Status: menunggu persetujuan pengawas. Halaman akan terbuka otomatis setelah disetujui.")},function(e){say(e&&e.code==="permission-denied"?DENIED:"Gagal mendaftar, coba lagi.")})}
 function approve(u,n){if(APPR[n]){toast("Sekolah ini sudah memiliki operator yang disetujui");return}
   DB.doc("appr/"+n).set({uid:u,ts:Date.now(),pw:(OWN[n]||{uid:UID}).uid}).then(function(){toast("Operator disetujui")},fail)}
 function addSchool(n,nama){if(!n){toast("Pilih sekolah dulu");return}
@@ -520,13 +565,16 @@ function ownList(){var ob=$("ownbox");ob.hidden=!ME.owner;$("tpbox").hidden=!ME.
   $("pq").innerHTML=pk.length?pk.map(function(u){return '<div class="rowx">'+esc(PREQ[u].name||"Tanpa nama")+' ('+esc(PREQ[u].email||"")+') <button class="btn go" data-pok="'+esc(u)+'">Setujui</button> <button class="btn" data-prej="'+esc(u)+'">Tolak</button></div>'}).join(""):"Tidak ada permintaan.";
   $("pl").innerHTML=Object.keys(ADM).map(function(u){var a=ADM[u]||{};
     return '<div class="rowx">'+(u===UID?"Anda (admin utama)":esc(a.name||("UID "+u.slice(0,8)+"..."))+(a.email?" ("+esc(a.email)+")":""))+((u===UID||a.owner)?"":' <button class="btn" data-pdel="'+esc(u)+'">Cabut</button>')+'</div>'}).join("")||"Belum ada data."}
-function pwOk(u){var q=PREQ[u]||{};DB.doc("admins/"+u).set({ok:true,name:q.name||"",email:q.email||"",by:UID,ts:Date.now()}).then(function(){return DB.doc("preq/"+u).delete()}).then(function(){toast("Pengawas disetujui")},fail)}
+function pwOk(u){var q=PREQ[u]||{};DB.doc("admins/"+u).set({ok:true,name:q.name||"",email:q.email||"",by:UID,ts:Date.now()}).then(function(){return DB.doc("pubpw/"+u).set({name:q.name||q.email||"Pengawas"})}).then(function(){return DB.doc("preq/"+u).delete()}).then(function(){toast("Pengawas disetujui")},fail)}
 async function opList(){ownList();
   var L=ME.owner?SCH:mine(),P=pend(),ids=[];P.forEach(function(p){ids.push(p.uid)});L.forEach(function(s){if(APPR[s.npsn])ids.push(APPR[s.npsn].uid)});
   ids=ids.filter(function(i){return i.indexOf("seed-")!==0});var ps={};
   Object.keys(REG).forEach(function(u){ps[u]=REG[u]});
   var nm=function(u){return u.indexOf("seed-")===0?"Operator arsip awal":esc((ps[u]&&(ps[u].name||ps[u].email))||"Pengguna")};
-  $("rq").innerHTML=P.length?P.map(function(p){return '<div class="rowx">'+nm(p.uid)+' mendaftar di '+esc(OWN[p.npsn].nama)+(OWN[p.npsn].uid!==UID?' <small class="note">(pengawas: '+esc((ADM[OWN[p.npsn].uid]||{}).name||(ADM[OWN[p.npsn].uid]||{}).email||'lain')+')</small>':'')+' <button class="btn go" data-ok="'+esc(p.uid)+'" data-sc="'+esc(p.npsn)+'">Setujui</button> <button class="btn" data-rej="'+esc(p.uid)+'" data-sc="'+esc(p.npsn)+'">Tolak</button></div>'}).join(""):"Tidak ada permintaan.";
+  $("rq").innerHTML=P.length?P.map(function(p){var o=OWN[p.npsn],nmS=o?o.nama:((REG[p.uid]||{}).nama||p.npsn);
+    var by=o&&o.uid!==UID?' <small class="note">(pengawas: '+esc((ADM[o.uid]||{}).name||(ADM[o.uid]||{}).email||'lain')+')</small>':'';
+    var bt=p.manual?'<button class="btn go" data-addok="'+esc(p.uid)+'" data-sc="'+esc(p.npsn)+'">Tambah sekolah dan setujui</button>':'<button class="btn go" data-ok="'+esc(p.uid)+'" data-sc="'+esc(p.npsn)+'">Setujui</button>';
+    return '<div class="rowx">'+nm(p.uid)+(p.manual?' meminta sekolah baru: ':' mendaftar di ')+esc(nmS)+(p.manual?' <small class="note">(NPSN '+esc(p.npsn)+')</small>':'')+by+' '+bt+' <button class="btn" data-rej="'+esc(p.uid)+'" data-sc="'+esc(p.npsn)+'">Tolak</button></div>'}).join(""):"Tidak ada permintaan.";
   var A=L.filter(function(s){return APPR[s.npsn]});
   $("ap").innerHTML=A.length?A.map(function(s){return '<div class="rowx">'+nm(APPR[s.npsn].uid)+', '+esc(s.nama)+' <button class="btn" data-adel="'+esc(s.npsn)+'">Hapus akun</button></div>'}).join(""):"Belum ada operator yang disetujui.";
 }
@@ -553,13 +601,14 @@ document.addEventListener("click",function(e){
   else if(b.id==="esave")saveEd()
   else if(d.mv){mvEd(+d.i,+d.mv)}
   else if(d.rm){if(confirm("Hapus aktivitas ini? Dokumen dan status validasinya tidak akan tampil lagi.")){EDIT.splice(+d.i,1);edRender()}}
+  else if(d.addok)addApprove(d.addok,d.sc);
   else if(d.ok)approve(d.ok,d.sc);
   else if(d.rej)DB.doc("dec/"+d.rej).set({npsn:d.sc,ts:Date.now(),pw:(OWN[d.sc]||{uid:UID}).uid}).then(function(){toast("Permintaan ditolak")},fail);
   else if(d.adel)DB.doc("appr/"+d.adel).delete().then(function(){toast("Akun operator dihapus. Sekolah bisa didaftar ulang.")},fail);
   else if(d.bdel)delSchool(d.bdel);
   else if(d.pok)pwOk(d.pok)
   else if(d.prej)DB.doc("preq/"+d.prej).delete().then(function(){toast("Permintaan ditolak")},fail)
-  else if(d.pdel){if(confirm("Cabut hak pengawas akun ini? Sekolah binaannya tetap tersimpan."))DB.doc("admins/"+d.pdel).delete().then(function(){toast("Hak pengawas dicabut")},fail)}
+  else if(d.pdel){if(confirm("Cabut hak pengawas akun ini? Sekolah binaannya tetap tersimpan."))DB.doc("admins/"+d.pdel).delete().then(function(){DB.doc("pubpw/"+d.pdel).delete().catch(function(){});toast("Hak pengawas dicabut")},fail)}
   else if(b.id==="reqp")reqPw()
   else if(b.id==="bcus"){var n=$("bn").value.trim(),nm=$("bnm").value.trim();if(!/^\d{5,10}$/.test(n)||!nm){toast("Isi NPSN (angka) dan nama sekolah");return}if(addSchool(n,nm.toUpperCase())){SEL.add(n);chkRender()}$("bn").value="";$("bnm").value=""}
   else if(b.id==="ops")openOps()
@@ -581,17 +630,20 @@ document.addEventListener("click",function(e){
 });
 ["q","fTahap","fStatus"].forEach(function(i){$(i).addEventListener("input",render)});
 window.addEventListener("hashchange",route);
+$("pp").addEventListener("change",function(){$("ps").innerHTML="";fillPick()});
+$("ps").addEventListener("change",function(){$("pnew").hidden=this.value!=="__baru"});
 
 var AERR={"auth/network-request-failed":"Koneksi internet bermasalah.","auth/user-disabled":"Akun ini dinonaktifkan.","auth/requires-recent-login":"Silakan keluar lalu masuk lagi, kemudian ulangi.","auth/missing-password":"Isi kata sandi.","auth/invalid-credential":"Email atau kata sandi salah.","auth/wrong-password":"Email atau kata sandi salah.","auth/user-not-found":"Email atau kata sandi salah.","auth/email-already-in-use":"Email sudah terdaftar. Silakan masuk.","auth/weak-password":"Kata sandi minimal 6 karakter.","auth/invalid-email":"Format email tidak valid.","auth/too-many-requests":"Terlalu banyak percobaan, coba lagi nanti."};
 function goLogin(w){
-  if(!LIVE){if(CFG){pendingW=w;setMode("in");$("dauth").showModal();return}location.hash=w==="sekolah"?"pilih":"daftar";return}
+  if(!LIVE){if(CFG){pendingW=w;var seen=false;try{seen=localStorage.getItem("spmi-seen")==="1"}catch(e){}setMode(seen?"in":"up");$("dauth").showModal();return}location.hash=w==="sekolah"?"pilih":"daftar";return}
   if(w==="pengawas"&&ME.role!=="pengawas"){notPw();return}
   $("lmsg").textContent="";location.hash=w==="sekolah"?"pilih":"daftar"}
 var AMODE="in";
-function setMode(m){AMODE=m;$("atl").textContent=m==="in"?"Masuk":"Buat akun baru";$("anm").hidden=$("apw2").hidden=m==="in";
-  $("asub").textContent=m==="in"?"Masuk":"Buat akun";$("afor").hidden=m!=="in";$("amsg").textContent="";
+function setMode(m){AMODE=m;$("atl").textContent=(m==="in"?"Masuk":"Daftar akun baru")+(pendingW?" sebagai "+({pengawas:"Pengawas",sekolah:"Satuan Pendidikan"})[pendingW]:"");$("anm").hidden=$("apw2").hidden=m==="in";
+  $("asub").textContent=m==="in"?"Masuk":"Kirim pendaftaran";$("afor").hidden=false;$("amsg").textContent="";
   $("tin").className="btn"+(m==="in"?" go":"");$("tup").className="btn"+(m==="up"?" go":"");
-  $("apw").autocomplete=m==="in"?"current-password":"new-password";$("anote").hidden=pendingW!=="pengawas"}
+  $("apw").autocomplete=m==="in"?"current-password":"new-password";var NT={pengawas:"Akun pengawas perlu disetujui <b>admin utama</b>. Setelah dikirim, statusnya <b>Menunggu persetujuan admin</b> dan halaman terbuka otomatis saat disetujui.",sekolah:"Setelah akun dibuat, pilih sekolah Anda. Pendaftaran dikirim ke pengawas sekolah itu dan berstatus <b>Menunggu persetujuan pengawas</b>."};
+  $("anote").hidden=!(m==="up"&&pendingW);$("anote").innerHTML=NT[pendingW]||""}
 function amsg(t,ok){var m=$("amsg");m.textContent=t;m.style.color=ok?"#1a7f4b":"#d9364a"}
 async function authSubmit(){var em=$("aem").value.trim(),pw=$("apw").value,nm=$("anm").value.trim(),bt=$("asub");amsg("");
   if(!/^\S+@\S+\.\S+$/.test(em)){amsg("Isi email dengan format yang benar.");return}
@@ -602,7 +654,7 @@ async function authSubmit(){var em=$("aem").value.trim(),pw=$("apw").value,nm=$(
       await c.user.updateProfile({displayName:nm});
       c.user.sendEmailVerification().catch(function(){});toast("Akun dibuat. Email verifikasi dikirim ke "+em)}
     else await AUTH.signInWithEmailAndPassword(em,pw);
-    $("apw").value=$("apw2").value="";$("dauth").close()}
+    $("apw").value=$("apw2").value="";try{localStorage.setItem("spmi-seen","1")}catch(e){}$("dauth").close()}
   catch(e){amsg(AERR[e.code]||("Gagal: "+(e.message||e)))}
   bt.disabled=false}
 async function resetPw(){var em=$("aem").value.trim();
@@ -614,7 +666,7 @@ function openAcc(){var u=AUTH.currentUser;if(!u)return;
   $("cnm").value=u.displayName||"";$("rver").hidden=u.emailVerified;$("cpw").value=$("npw").value="";$("cmsg").textContent="";$("dacc").showModal()}
 async function saveName(){var u=AUTH.currentUser,n=$("cnm").value.trim();if(!n){toast("Isi nama lengkap");return}
   try{await u.updateProfile({displayName:n});
-    for(var c of ["preq","reg"]){var r=DB.doc(c+"/"+UID),s=await r.get();if(s.exists)await r.set({name:n},{merge:true})}
+    for(var c of ["preq","reg","pubpw"]){var r=DB.doc(c+"/"+UID),s=await r.get();if(s.exists)await r.set({name:n},{merge:true})}
     var ai=$("ainfo").innerHTML;$("ainfo").innerHTML=esc(n)+ai.slice(ai.indexOf("<br>"));toast("Nama diperbarui")}
   catch(e){console.error(e);fail()}}
 async function changePw(){var u=AUTH.currentUser,cm=$("cmsg"),cur=$("cpw").value,nw=$("npw").value;
@@ -701,9 +753,10 @@ async function startLive(u){
       if(ME.owner&&OWNERUID!==UID&&!window.ENS){window.ENS=1;DB.doc("master/sekolah").set({schools:MAS,ownerUid:UID}).catch(function(){})}
       if(MR)sync();if($("dop").open){chkRender();ownList()}},er);
     if(ME.owner){
-      DB.collection("admins").onSnapshot(function(c){var o={};c.docs.forEach(function(x){o[x.id]=x.data()});ADM=o;if(MR)sync()},er);
+      DB.collection("admins").onSnapshot(function(c){var o={};c.docs.forEach(function(x){o[x.id]=x.data()});ADM=o;Object.keys(o).forEach(function(k){var nm=o[k].name||o[k].email||"Pengawas";if(!PUB[k]||PUB[k].name!==nm)DB.doc("pubpw/"+k).set({name:nm}).catch(function(){})});if(MR)sync()},er);
       DB.collection("preq").onSnapshot(function(c){var o={};c.docs.forEach(function(x){o[x.id]=x.data()});PREQ=o;if(MR)sync()},function(e){console.error(e);toast("Permintaan pengawas tidak bisa dibaca"+((e&&e.code==="permission-denied")?": aturan Firestore koleksi preq belum mengizinkan admin utama membaca":""))});
     }
+    DB.collection("pubpw").onSnapshot(function(c){var o={};c.docs.forEach(function(x){o[x.id]=x.data()});PUB=o;if(MR)sync()},function(e){console.error(e)});
     $("out").hidden=false;$("out").textContent="Akun saya ("+u.email+")";
     sync();
     if(pendingW){WANT=pendingW;pendingW=null}
